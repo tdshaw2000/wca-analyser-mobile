@@ -1,24 +1,16 @@
 /**
- * Home route ("/"). Temporary placeholder: expo-router needs an index route to
- * boot. This gets replaced by the first real vertical slice (person search) once
- * we build it test-first. Route files stay thin — when there's a real screen it
- * lives in src/ui/screens and is rendered from here.
+ * Home route ("/"). Route files stay thin: set navigation options and render the
+ * screen component from src/ui/screens. All fetching/logic lives below the UI.
  */
 import { Stack } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+
+import PersonSearchScreen from '@/ui/screens/PersonSearchScreen';
 
 export default function Index() {
   return (
     <>
-      <Stack.Screen options={{ title: 'WCA Analyser' }} />
-      <View style={styles.container}>
-        <Text style={styles.text}>Coming soon</Text>
-      </View>
+      <Stack.Screen options={{ title: 'Search competitors' }} />
+      <PersonSearchScreen />
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  text: { fontSize: 16 },
-});
