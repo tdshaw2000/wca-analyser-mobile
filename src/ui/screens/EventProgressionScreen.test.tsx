@@ -31,6 +31,20 @@ const PROGRESSION: RecordPoint[] = [
   { date: SECOND_DATE, value: SECOND_SINGLE },
 ];
 
+// Distinct dates and values from the singles so getByText stays unambiguous.
+const AVG_FIRST_DATE = '2022-05-14';
+const AVG_FIRST_AVERAGE = 2050; // formatTime -> "20.50"
+const AVG_FIRST_TIME = '20.50';
+const AVG_SECOND_DATE = '2023-06-20';
+const AVG_SECOND_AVERAGE = 1990; // formatTime -> "19.90"
+const AVG_SECOND_TIME = '19.90';
+const AVERAGE_PROGRESSION: RecordPoint[] = [
+  { date: AVG_FIRST_DATE, value: AVG_FIRST_AVERAGE },
+  { date: AVG_SECOND_DATE, value: AVG_SECOND_AVERAGE },
+];
+
+const SINGLE_HEADING = 'Single';
+const AVERAGE_HEADING = 'Average';
 const LOADING_TEST_ID = 'progression-loading';
 const RETRY_LABEL = 'Try again';
 const EMPTY_MESSAGE = 'No personal records yet for this event.';
@@ -38,6 +52,7 @@ const EMPTY_MESSAGE = 'No personal records yet for this event.';
 function mockProgressionState(overrides: Partial<ReturnType<typeof usePrProgression>>) {
   usePrProgressionMock.mockReturnValue({
     data: [],
+    averages: [],
     loading: false,
     error: null,
     reload: jest.fn(),
@@ -77,6 +92,23 @@ describe('EventProgressionScreen', () => {
     expect(screen.getByText(FIRST_TIME)).toBeTruthy();
     expect(screen.getByText(SECOND_DATE)).toBeTruthy();
     expect(screen.getByText(SECOND_TIME)).toBeTruthy();
+  });
+
+  it('renders a single table and an average table, each with its heading', async () => {
+    mockProgressionState({ data: PROGRESSION, averages: AVERAGE_PROGRESSION });
+
+    await render(<EventProgressionScreen />);
+
+    expect(screen.getByText(SINGLE_HEADING)).toBeTruthy();
+    expect(screen.getByText(AVERAGE_HEADING)).toBeTruthy();
+    // Single rows.
+    expect(screen.getByText(FIRST_TIME)).toBeTruthy();
+    expect(screen.getByText(SECOND_TIME)).toBeTruthy();
+    // Average rows.
+    expect(screen.getByText(AVG_FIRST_DATE)).toBeTruthy();
+    expect(screen.getByText(AVG_FIRST_TIME)).toBeTruthy();
+    expect(screen.getByText(AVG_SECOND_DATE)).toBeTruthy();
+    expect(screen.getByText(AVG_SECOND_TIME)).toBeTruthy();
   });
 
   it('shows an empty message when the competitor has no records for the event', async () => {
