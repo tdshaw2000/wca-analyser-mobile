@@ -20,3 +20,13 @@ export interface WcaPersonDto {
 export interface WcaPersonSearchDto {
   person: WcaPersonDto;
 }
+
+/**
+ * The /persons/{wca_id} profile response. personal_records is a map keyed by
+ * event id; we only consume its keys (the events the competitor has competed
+ * in), so the record values are left unmodelled.
+ */
+export interface WcaPersonProfileDto {
+  person: WcaPersonDto;
+  personal_records: Record<string, unknown>;
+}
