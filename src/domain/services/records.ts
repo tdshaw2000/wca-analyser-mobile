@@ -9,6 +9,11 @@
  * Pure TypeScript — no React, RN, network, or SQLite imports allowed here.
  * Ported from the Python source's records.py.
  */
+import type { Result } from '@/domain/models/result';
+import type { RecordPoint } from '@/domain/models/recordPoint';
+
+/** Selects the metric (single or average) a progression is computed over. */
+type Metric = (result: Result) => number;
 
 /** Flag each value that beats every preceding value, in the order given. */
 export function personalRecordFlags(values: number[]): boolean[] {
@@ -21,4 +26,36 @@ export function personalRecordFlags(values: number[]): boolean[] {
     if (isRecord) bestSoFar = value;
   }
   return flags;
+}
+
+/** Return the personal-record singles, with their dates, in chronological order. */
+export function singleRecordProgression(
+  results: Result[],
+  competitionDates: Record<string, string>,
+): RecordPoint[] {
+  return recordProgression(results, competitionDates, (result) => result.single);
+}
+
+function recordProgression(
+  results: Result[],
+  competitionDates: Record<string, string>,
+  metric: Metric,
+): RecordPoint[] {
+  // ISO yyyy-mm-dd dates sort chronologically as strings; sort is stable, so
+  // results sharing a date keep their original order (the later, faster record
+  // then overwrites the earlier one below).
+  const datedResults = [...results].sort((first, second) =>
+    competitionDates[first.competitionId].localeCompare(competitionDates[second.competitionId]),
+  );
+  const flags = personalRecordFlags(datedResults.map(metric));
+  // Keyed by date so only the best record per date survives; a Map preserves the
+  // first-seen (chronological) order of its keys for the returned progression.
+  const recordsByDate = new Map<string, RecordPoint>();
+  datedResults.forEach((result, index) => {
+    if (flags[index]) {
+      const date = competitionDates[result.competitionId];
+      recordsByDate.set(date, { date, value: metric(result) });
+    }
+  });
+  return Array.from(recordsByDate.values());
 }
