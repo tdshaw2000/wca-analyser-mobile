@@ -41,3 +41,13 @@ export interface WcaResultDto {
   average: number;
   competition_id: string;
 }
+
+/**
+ * One element of the /persons/{wca_id}/competitions response. The real element
+ * also carries name, end_date, etc.; we only consume the id and start date (the
+ * start date orders results for PR computation).
+ */
+export interface WcaCompetitionDto {
+  id: string;
+  start_date: string;
+}
