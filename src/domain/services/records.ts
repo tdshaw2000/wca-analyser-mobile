@@ -36,6 +36,14 @@ export function singleRecordProgression(
   return recordProgression(results, competitionDates, (result) => result.single);
 }
 
+/** Return the personal-record averages, with their dates, in chronological order. */
+export function averageRecordProgression(
+  results: Result[],
+  competitionDates: Record<string, string>,
+): RecordPoint[] {
+  return recordProgression(results, competitionDates, (result) => result.average);
+}
+
 function recordProgression(
   results: Result[],
   competitionDates: Record<string, string>,
