@@ -11,7 +11,7 @@
  * Event ids are shown raw for now (e.g. "333"); turning them into readable names
  * is the separate events.py port (a later slice).
  */
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useCompetitorProfile } from '@/hooks/useCompetitorProfile';
@@ -24,6 +24,8 @@ const GENERIC_ERROR_MESSAGE = 'Something went wrong. Please try again.';
 const RETRY_BUTTON_LABEL = 'Try again';
 const LOADING_TEST_ID = 'competitor-loading';
 const AVATAR_TEST_ID = 'competitor-avatar';
+// expo-router route pattern; [id] and [event] are filled from params.
+const EVENT_PROGRESSION_ROUTE = '/person/[id]/[event]';
 
 // A `type` (not `interface`): useLocalSearchParams constrains its generic to
 // Record<string, string | string[]>, which only type aliases satisfy (they get
@@ -38,6 +40,11 @@ type CompetitorRouteParams = {
 export default function CompetitorScreen() {
   const { id, name } = useLocalSearchParams<CompetitorRouteParams>();
   const { data, loading, error, reload } = useCompetitorProfile(id);
+  const router = useRouter();
+
+  function openEvent(eventId: string) {
+    router.push({ pathname: EVENT_PROGRESSION_ROUTE, params: { id, event: eventId, name } });
+  }
 
   return (
     <View style={styles.container}>
@@ -54,7 +61,13 @@ export default function CompetitorScreen() {
           <Text style={styles.wcaId}>{id}</Text>
         </View>
       </View>
-      <ProfileBody data={data} loading={loading} error={error} onRetry={reload} />
+      <ProfileBody
+        data={data}
+        loading={loading}
+        error={error}
+        onRetry={reload}
+        onSelectEvent={openEvent}
+      />
     </View>
   );
 }
@@ -64,9 +77,10 @@ interface ProfileBodyProps {
   loading: boolean;
   error: Error | null;
   onRetry: () => void;
+  onSelectEvent: (eventId: string) => void;
 }
 
-function ProfileBody({ data, loading, error, onRetry }: ProfileBodyProps) {
+function ProfileBody({ data, loading, error, onRetry, onSelectEvent }: ProfileBodyProps) {
   if (loading) {
     return (
       <ActivityIndicator testID={LOADING_TEST_ID} style={styles.centered} color={colors.primary} />
@@ -91,7 +105,15 @@ function ProfileBody({ data, loading, error, onRetry }: ProfileBodyProps) {
       data={eventIds}
       keyExtractor={(eventId) => eventId}
       ListHeaderComponent={<Text style={styles.eventsHeading}>{EVENTS_HEADING}</Text>}
-      renderItem={({ item }) => <Text style={styles.eventRow}>{item}</Text>}
+      renderItem={({ item }) => (
+        <Pressable
+          style={styles.eventRow}
+          onPress={() => onSelectEvent(item)}
+          accessibilityRole="button"
+        >
+          <Text style={styles.eventRowText}>{item}</Text>
+        </Pressable>
+      )}
     />
   );
 }
@@ -123,12 +145,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   eventRow: {
-    fontSize: 16,
-    color: colors.text,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     backgroundColor: colors.card,
   },
+  eventRowText: { fontSize: 16, color: colors.text },
 });
