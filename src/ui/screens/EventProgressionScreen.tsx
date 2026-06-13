@@ -1,18 +1,19 @@
 /**
  * Event PR-progression screen. Reached by tapping a competed-event row on the
  * CompetitorScreen. Reads the competitor id, event id (and optional name) from
- * the route params, fetches the single-record progression via usePrProgression,
- * and renders it as a chronological list of date + personal-record time.
+ * the route params, fetches the single- and average-record progressions via
+ * usePrProgression, and renders each as a labelled, chronological table of
+ * date + personal-record time.
  *
  * Dumb by design: all fetching/computation lives in the hook. It renders the
  * four states every WCA-backed screen must handle — loading, error (with retry),
- * empty (no records yet), and the loaded progression list.
+ * empty (no records of either kind yet), and the loaded progression tables.
  *
  * The event is shown as its raw id (e.g. "333"); readable names are the separate
  * events.py port (a later slice).
  */
 import { useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { usePrProgression } from '@/hooks/usePrProgression';
 import { formatTime } from '@/domain/services/formatting';
@@ -22,7 +23,10 @@ import { colors } from '@/ui/theme/colors';
 const EMPTY_MESSAGE = 'No personal records yet for this event.';
 const GENERIC_ERROR_MESSAGE = 'Something went wrong. Please try again.';
 const RETRY_BUTTON_LABEL = 'Try again';
+const SINGLE_TABLE_HEADING = 'Single';
+const AVERAGE_TABLE_HEADING = 'Average';
 const LOADING_TEST_ID = 'progression-loading';
+const EMPTY_COUNT = 0;
 
 // A `type` (not `interface`): useLocalSearchParams constrains its generic to
 // Record<string, string | string[]>, which only type aliases satisfy.
@@ -37,7 +41,7 @@ type EventRouteParams = {
 
 export default function EventProgressionScreen() {
   const { id, event, name } = useLocalSearchParams<EventRouteParams>();
-  const { data, loading, error, reload } = usePrProgression(id, event);
+  const { data, averages, loading, error, reload } = usePrProgression(id, event);
 
   return (
     <View style={styles.container}>
@@ -45,19 +49,26 @@ export default function EventProgressionScreen() {
         <Text style={styles.heading}>{event}</Text>
         <Text style={styles.subtitle}>{name ?? id}</Text>
       </View>
-      <ProgressionBody data={data} loading={loading} error={error} onRetry={reload} />
+      <ProgressionBody
+        singles={data}
+        averages={averages}
+        loading={loading}
+        error={error}
+        onRetry={reload}
+      />
     </View>
   );
 }
 
 interface ProgressionBodyProps {
-  data: RecordPoint[];
+  singles: RecordPoint[];
+  averages: RecordPoint[];
   loading: boolean;
   error: Error | null;
   onRetry: () => void;
 }
 
-function ProgressionBody({ data, loading, error, onRetry }: ProgressionBodyProps) {
+function ProgressionBody({ singles, averages, loading, error, onRetry }: ProgressionBodyProps) {
   if (loading) {
     return (
       <ActivityIndicator testID={LOADING_TEST_ID} style={styles.centered} color={colors.primary} />
@@ -73,20 +84,36 @@ function ProgressionBody({ data, loading, error, onRetry }: ProgressionBodyProps
       </View>
     );
   }
-  if (data.length === 0) {
+  if (singles.length === EMPTY_COUNT && averages.length === EMPTY_COUNT) {
     return <Text style={[styles.centered, styles.message]}>{EMPTY_MESSAGE}</Text>;
   }
   return (
-    <FlatList
-      data={data}
-      keyExtractor={(point) => point.date}
-      renderItem={({ item }) => (
-        <View style={styles.row}>
-          <Text style={styles.rowDate}>{item.date}</Text>
-          <Text style={styles.rowTime}>{formatTime(item.value)}</Text>
+    <ScrollView contentContainerStyle={styles.tables}>
+      <RecordTable heading={SINGLE_TABLE_HEADING} points={singles} />
+      <RecordTable heading={AVERAGE_TABLE_HEADING} points={averages} />
+    </ScrollView>
+  );
+}
+
+interface RecordTableProps {
+  heading: string;
+  points: RecordPoint[];
+}
+
+// A labelled progression table. Renders nothing when empty so a competitor with
+// only single records (e.g. a format without an average) shows just that table.
+function RecordTable({ heading, points }: RecordTableProps) {
+  if (points.length === EMPTY_COUNT) return null;
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionHeading}>{heading}</Text>
+      {points.map((point) => (
+        <View key={point.date} style={styles.row}>
+          <Text style={styles.rowDate}>{point.date}</Text>
+          <Text style={styles.rowTime}>{formatTime(point.value)}</Text>
         </View>
-      )}
-    />
+      ))}
+    </View>
   );
 }
 
@@ -105,6 +132,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonLabel: { color: '#ffffff', fontWeight: '600' },
+  tables: { paddingBottom: 24 },
+  section: { marginTop: 8 },
+  sectionHeading: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
