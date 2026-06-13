@@ -4,6 +4,7 @@
  * handle: loading, error (incl. offline, surfaced via the error message), empty
  * (after a search), and results. Dumb by design — all fetching lives in the hook.
  */
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -26,8 +27,11 @@ const IDLE_MESSAGE = 'Search for a competitor by name.';
 const EMPTY_MESSAGE = 'No competitors found.';
 const GENERIC_ERROR_MESSAGE = 'Something went wrong. Please try again.';
 const LOADING_TEST_ID = 'search-loading';
+// expo-router route pattern; [id] is filled from params.id, name rides along.
+const COMPETITOR_ROUTE = '/person/[id]';
 
 export default function PersonSearchScreen() {
+  const router = useRouter();
   const [query, setQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const { data, loading, error, reload } = useSearchPersons(submittedQuery);
@@ -36,6 +40,10 @@ export default function PersonSearchScreen() {
 
   function submit() {
     setSubmittedQuery(query);
+  }
+
+  function openCompetitor(person: Person) {
+    router.push({ pathname: COMPETITOR_ROUTE, params: { id: person.wcaId, name: person.name } });
   }
 
   return (
@@ -62,6 +70,7 @@ export default function PersonSearchScreen() {
         error={error}
         hasSearched={hasSearched}
         onRetry={reload}
+        onSelectPerson={openCompetitor}
       />
     </View>
   );
@@ -73,9 +82,10 @@ interface SearchBodyProps {
   error: Error | null;
   hasSearched: boolean;
   onRetry: () => void;
+  onSelectPerson: (person: Person) => void;
 }
 
-function SearchBody({ data, loading, error, hasSearched, onRetry }: SearchBodyProps) {
+function SearchBody({ data, loading, error, hasSearched, onRetry, onSelectPerson }: SearchBodyProps) {
   if (loading) {
     return <ActivityIndicator testID={LOADING_TEST_ID} style={styles.centered} color={colors.primary} />;
   }
@@ -94,7 +104,9 @@ function SearchBody({ data, loading, error, hasSearched, onRetry }: SearchBodyPr
       <FlatList
         data={data}
         keyExtractor={(person) => person.wcaId}
-        renderItem={({ item }) => <PersonRow person={item} />}
+        renderItem={({ item }) => (
+          <PersonRow person={item} onPress={() => onSelectPerson(item)} />
+        )}
       />
     );
   }
@@ -104,12 +116,12 @@ function SearchBody({ data, loading, error, hasSearched, onRetry }: SearchBodyPr
   return <Text style={[styles.centered, styles.message]}>{IDLE_MESSAGE}</Text>;
 }
 
-function PersonRow({ person }: { person: Person }) {
+function PersonRow({ person, onPress }: { person: Person; onPress: () => void }) {
   return (
-    <View style={styles.row}>
+    <Pressable style={styles.row} onPress={onPress} accessibilityRole="button">
       <Text style={styles.rowName}>{person.name}</Text>
       <Text style={styles.rowWcaId}>{person.wcaId}</Text>
-    </View>
+    </Pressable>
   );
 }
 
