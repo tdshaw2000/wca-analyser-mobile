@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import PersonSearchScreen from '@/ui/screens/PersonSearchScreen';
+import { useRouter } from 'expo-router';
+
 import { useSearchPersons } from '@/hooks/useSearchPersons';
 import type { UseSearchPersonsResult } from '@/hooks/useSearchPersons';
 import type { Person } from '@/domain/models/person';
@@ -9,6 +11,11 @@ import type { Person } from '@/domain/models/person';
 // empty / results) can be driven deterministically, with no network or timers.
 jest.mock('@/hooks/useSearchPersons');
 const useSearchPersonsMock = useSearchPersons as jest.MockedFunction<typeof useSearchPersons>;
+
+// Mock the router so we can assert navigation without a real navigation tree.
+jest.mock('expo-router', () => ({ useRouter: jest.fn() }));
+const useRouterMock = useRouter as jest.MockedFunction<typeof useRouter>;
+const push = jest.fn();
 
 const PERSON: Person = {
   name: 'Mats Valk',
@@ -32,6 +39,8 @@ function mockHook(overrides: Partial<UseSearchPersonsResult> = {}) {
 beforeEach(() => {
   useSearchPersonsMock.mockReset();
   reload.mockReset();
+  push.mockReset();
+  useRouterMock.mockReturnValue({ push } as unknown as ReturnType<typeof useRouter>);
   mockHook();
 });
 
@@ -74,6 +83,18 @@ describe('PersonSearchScreen', () => {
     await fireEvent.press(screen.getByText('Search'));
 
     expect(screen.getByText(/no competitors found/i)).toBeTruthy();
+  });
+
+  it('navigates to the competitor page, passing id and name, when a row is tapped', async () => {
+    mockHook({ data: [PERSON] });
+
+    await render(<PersonSearchScreen />);
+    await fireEvent.press(screen.getByText(PERSON.name));
+
+    expect(push).toHaveBeenCalledWith({
+      pathname: '/person/[id]',
+      params: { id: PERSON.wcaId, name: PERSON.name },
+    });
   });
 
   it('passes the submitted query to the search hook', async () => {
