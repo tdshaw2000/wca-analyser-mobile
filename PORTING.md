@@ -25,7 +25,8 @@ See `CLAUDE.md` for the porting rules (test-first, vertical slices, the module m
 | `chart.py`         | `domain/services/` (UI renders natively)        | not started   | —            |
 | `web.py` (routes)  | `app/` routes + `ui/screens/`                   | partial       | pre-tracking |
 
-_Mobile screens so far: PersonSearch, Competitor, EventProgression._
+_Mobile screens so far: PersonSearch, Competitor, EventProgression (shows both the
+single and average PR progression tables)._
 
 ## Backlog (Python features not yet ported)
 
