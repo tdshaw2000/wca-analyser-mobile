@@ -1,4 +1,8 @@
-import { personalRecordFlags, singleRecordProgression } from '@/domain/services/records';
+import {
+  averageRecordProgression,
+  personalRecordFlags,
+  singleRecordProgression,
+} from '@/domain/services/records';
 import type { Result } from '@/domain/models/result';
 
 // Ported from the Python source's tests/test_records.py. Singles are
@@ -91,6 +95,28 @@ describe('singleRecordProgression', () => {
     expect(progression).toEqual([
       { date: EARLIEST_DATE, value: SAME_DATE_FASTER_SINGLE },
       { date: LATEST_DATE, value: LATEST_SINGLE },
+    ]);
+  });
+});
+
+const EARLIEST_AVERAGE = 2456;
+const MIDDLE_AVERAGE = 2890;
+const LATEST_AVERAGE = 2012;
+
+describe('averageRecordProgression', () => {
+  it('returns only the chronological average records, in date order', () => {
+    const results: Result[] = [
+      { single: MIDDLE_SINGLE, average: MIDDLE_AVERAGE, competitionId: MIDDLE_COMPETITION_ID },
+      { single: EARLIEST_SINGLE, average: EARLIEST_AVERAGE, competitionId: EARLIEST_COMPETITION_ID },
+      { single: LATEST_SINGLE, average: LATEST_AVERAGE, competitionId: LATEST_COMPETITION_ID },
+    ];
+
+    const progression = averageRecordProgression(results, COMPETITION_DATES);
+
+    // The middle average (slower than the earliest) is not a record and is dropped.
+    expect(progression).toEqual([
+      { date: EARLIEST_DATE, value: EARLIEST_AVERAGE },
+      { date: LATEST_DATE, value: LATEST_AVERAGE },
     ]);
   });
 });
