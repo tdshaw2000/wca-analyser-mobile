@@ -1,19 +1,22 @@
 import { render, screen, fireEvent } from '@testing-library/react-native';
 
 import CompetitorScreen from '@/ui/screens/CompetitorScreen';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCompetitorProfile } from '@/hooks/useCompetitorProfile';
 import type { Profile } from '@/domain/models/profile';
 
-// Two collaborators are mocked: the route-param reader (which competitor) and
-// the profile hook (its { data, loading, error, reload } drive the four states).
-// The screen is dumb — fetching lives in the hook (covered by its own spec).
-jest.mock('expo-router', () => ({ useLocalSearchParams: jest.fn() }));
+// Collaborators are mocked: the route-param reader (which competitor), the
+// router (to assert navigation), and the profile hook (its { data, loading,
+// error, reload } drive the four states). The screen is dumb — fetching lives in
+// the hook (covered by its own spec).
+jest.mock('expo-router', () => ({ useLocalSearchParams: jest.fn(), useRouter: jest.fn() }));
 jest.mock('@/hooks/useCompetitorProfile');
 
 const useLocalSearchParamsMock = useLocalSearchParams as jest.MockedFunction<
   typeof useLocalSearchParams
 >;
+const useRouterMock = useRouter as jest.MockedFunction<typeof useRouter>;
+const push = jest.fn();
 const useCompetitorProfileMock = useCompetitorProfile as jest.MockedFunction<
   typeof useCompetitorProfile
 >;
@@ -50,6 +53,8 @@ function mockProfileState(overrides: Partial<ReturnType<typeof useCompetitorProf
 beforeEach(() => {
   useLocalSearchParamsMock.mockReset();
   useCompetitorProfileMock.mockReset();
+  push.mockReset();
+  useRouterMock.mockReturnValue({ push } as unknown as ReturnType<typeof useRouter>);
   useLocalSearchParamsMock.mockReturnValue({ id: WCA_ID, name: NAME });
 });
 
@@ -111,5 +116,17 @@ describe('CompetitorScreen', () => {
     expect(screen.getByText(failure.message)).toBeTruthy();
     fireEvent.press(screen.getByText(RETRY_LABEL));
     expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('navigates to the event progression, passing id, event and name, when an event is tapped', async () => {
+    mockProfileState({ data: PROFILE });
+
+    await render(<CompetitorScreen />);
+    await fireEvent.press(screen.getByText('333'));
+
+    expect(push).toHaveBeenCalledWith({
+      pathname: '/person/[id]/[event]',
+      params: { id: WCA_ID, event: '333', name: NAME },
+    });
   });
 });
