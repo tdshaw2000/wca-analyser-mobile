@@ -27,13 +27,19 @@ const LATEST_DATE = '2024-11-01';
 const EARLIEST_SINGLE = 1807;
 const MIDDLE_SINGLE = 2134;
 const LATEST_SINGLE = 1498;
+// Averages chosen so each competition sets an average PR (a steady improvement) —
+// a different shape from the single progression (whose middle solve is not a
+// record), proving the hook computes the two metrics independently.
+const EARLIEST_AVERAGE = 2050;
+const MIDDLE_AVERAGE = 1990;
+const LATEST_AVERAGE = 1850;
 
-// Out of date order, with a middle solve that is slower than the earliest (so not
-// a record). average is irrelevant to a single progression; 0 stands in.
+// Out of date order, with a middle single that is slower than the earliest (so not
+// a single record, though its average still is).
 const RESULTS: Result[] = [
-  { single: MIDDLE_SINGLE, average: 0, competitionId: MIDDLE_COMPETITION_ID },
-  { single: EARLIEST_SINGLE, average: 0, competitionId: EARLIEST_COMPETITION_ID },
-  { single: LATEST_SINGLE, average: 0, competitionId: LATEST_COMPETITION_ID },
+  { single: MIDDLE_SINGLE, average: MIDDLE_AVERAGE, competitionId: MIDDLE_COMPETITION_ID },
+  { single: EARLIEST_SINGLE, average: EARLIEST_AVERAGE, competitionId: EARLIEST_COMPETITION_ID },
+  { single: LATEST_SINGLE, average: LATEST_AVERAGE, competitionId: LATEST_COMPETITION_ID },
 ];
 const COMPETITION_DATES: Record<string, string> = {
   [EARLIEST_COMPETITION_ID]: EARLIEST_DATE,
@@ -43,6 +49,11 @@ const COMPETITION_DATES: Record<string, string> = {
 const EXPECTED_PROGRESSION = [
   { date: EARLIEST_DATE, value: EARLIEST_SINGLE },
   { date: LATEST_DATE, value: LATEST_SINGLE },
+];
+const EXPECTED_AVERAGE_PROGRESSION = [
+  { date: EARLIEST_DATE, value: EARLIEST_AVERAGE },
+  { date: MIDDLE_DATE, value: MIDDLE_AVERAGE },
+  { date: LATEST_DATE, value: LATEST_AVERAGE },
 ];
 
 function renderProgression(initialProps = { wcaId: WCA_ID, eventId: EVENT_ID }) {
@@ -66,6 +77,7 @@ describe('usePrProgression', () => {
     expect(getResultsMock).not.toHaveBeenCalled();
     expect(getCompetitionDatesMock).not.toHaveBeenCalled();
     expect(result.current.data).toEqual([]);
+    expect(result.current.averages).toEqual([]);
     expect(result.current.loading).toBe(false);
     expect(result.current.error).toBeNull();
   });
@@ -81,6 +93,16 @@ describe('usePrProgression', () => {
     expect(getCompetitionDatesMock).toHaveBeenCalledWith(WCA_ID);
     expect(result.current.data).toEqual(EXPECTED_PROGRESSION);
     expect(result.current.error).toBeNull();
+  });
+
+  it('exposes the average-record progression alongside the singles', async () => {
+    getResultsMock.mockResolvedValue(RESULTS);
+    getCompetitionDatesMock.mockResolvedValue(COMPETITION_DATES);
+
+    const { result } = await renderProgression();
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.averages).toEqual(EXPECTED_AVERAGE_PROGRESSION);
   });
 
   it('reports loading while the fetches are in flight', async () => {
