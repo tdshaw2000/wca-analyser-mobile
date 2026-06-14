@@ -76,6 +76,15 @@ describe('EventProgressionScreen', () => {
     expect(usePrProgressionMock).toHaveBeenCalledWith(WCA_ID, EVENT_ID);
   });
 
+  it('shows the event display name, not the raw id, as the heading', async () => {
+    mockProgressionState({ data: PROGRESSION });
+
+    await render(<EventProgressionScreen />);
+
+    expect(screen.getByText('3x3x3 Cube')).toBeTruthy();
+    expect(screen.queryByText(EVENT_ID)).toBeNull();
+  });
+
   it('shows a loading indicator while the progression is being fetched', async () => {
     mockProgressionState({ loading: true });
 
