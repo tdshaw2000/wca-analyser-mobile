@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import EventProgressionScreen from '@/ui/screens/EventProgressionScreen';
 import { useLocalSearchParams } from 'expo-router';
 import { usePrProgression } from '@/hooks/usePrProgression';
-import { CHART_POINT_TEST_ID } from '@/ui/components/RecordChart';
+import { SINGLE_POINT_TEST_ID, AVERAGE_POINT_TEST_ID } from '@/ui/components/RecordChart';
 import type { RecordPoint } from '@/domain/models/recordPoint';
 
 // Two collaborators are mocked: the route-param reader (which competitor + event)
@@ -100,8 +100,9 @@ describe('EventProgressionScreen', () => {
 
     await render(<EventProgressionScreen />);
 
-    expect(screen.getByText(SINGLE_HEADING)).toBeTruthy();
-    expect(screen.getByText(AVERAGE_HEADING)).toBeTruthy();
+    // "Single"/"Average" now appear in both the chart legend and the table headings.
+    expect(screen.getAllByText(SINGLE_HEADING).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(AVERAGE_HEADING).length).toBeGreaterThan(0);
     // Single rows.
     expect(screen.getByText(FIRST_TIME)).toBeTruthy();
     expect(screen.getByText(SECOND_TIME)).toBeTruthy();
@@ -112,15 +113,14 @@ describe('EventProgressionScreen', () => {
     expect(screen.getByText(AVG_SECOND_TIME)).toBeTruthy();
   });
 
-  it('plots the single and average progressions as charts', async () => {
+  it('plots both progressions on a single combined chart', async () => {
     mockProgressionState({ data: PROGRESSION, averages: AVERAGE_PROGRESSION });
 
     await render(<EventProgressionScreen />);
 
-    // One marker per record across both charts.
-    expect(screen.getAllByTestId(CHART_POINT_TEST_ID)).toHaveLength(
-      PROGRESSION.length + AVERAGE_PROGRESSION.length,
-    );
+    // One chart, one marker per single and per average record.
+    expect(screen.getAllByTestId(SINGLE_POINT_TEST_ID)).toHaveLength(PROGRESSION.length);
+    expect(screen.getAllByTestId(AVERAGE_POINT_TEST_ID)).toHaveLength(AVERAGE_PROGRESSION.length);
   });
 
   it('shows an empty message when the competitor has no records for the event', async () => {
