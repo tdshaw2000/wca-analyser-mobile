@@ -22,18 +22,25 @@ See `CLAUDE.md` for the porting rules (test-first, vertical slices, the module m
 | `records.py`       | `domain/services/records.ts`                    | ported        | pre-tracking |
 | `formatting.py`    | `domain/services/formatting.ts`                 | ported        | pre-tracking |
 | `events.py`        | `domain/` (event id → name table)               | not started   | —            |
-| `chart.py`         | `domain/services/` (UI renders natively)        | not started   | —            |
+| `chart.py`         | `domain/services/chart.ts` (UI renders natively) | partial      | `8529b4a`    |
 | `web.py` (routes)  | `app/` routes + `ui/screens/`                   | partial       | pre-tracking |
 
-_Mobile screens so far: PersonSearch, Competitor, EventProgression (shows both the
-single and average PR progression tables)._
+_Mobile screens so far: PersonSearch, Competitor, EventProgression (an SVG line
+chart over each of the single and average PR progressions, above its table)._
+
+_`chart.py` is **partial**: `toRecordSeries` is ported for timed events only.
+The Multi-Blind (`333mbf`, plotted by points) and Fewest-Moves (`333fm`, averages
+scaled to moves) branches, plus `to_consistency_series`, are not yet ported — they
+depend on `format_single`/`format_average`/`decode_multi_blind`, which formatting.ts
+also still lacks (only `format_time` is ported, despite the row above)._
 
 ## Backlog (Python features not yet ported)
 
-- **Scatterplot** — lives in `chart.py` (data shaping) + `web.py` (rendering).
-  Port the point-shaping logic into `domain/services/` **test-first** (port its
-  pytest → red → implement → green); re-implement the chart itself as a native RN
-  component (manual look/feel check, not a unit test).
+- **Chart — remaining `chart.py` cases:** `toRecordSeries` for Multi-Blind and
+  Fewest-Moves, and `to_consistency_series`. These need `format_single`,
+  `format_average`, `format_consistency`, and `decode_multi_blind` ported into
+  formatting.ts first (each test-first), then the chart cases, then the native
+  component handles the new event units. `RecordChart` already renders timed events.
 - Port the `events.py` id → name table when a screen needs event names.
 
 ## Workflow for any slice (new feature OR drift fix)
