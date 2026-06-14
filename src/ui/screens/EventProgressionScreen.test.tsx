@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react-native';
 import EventProgressionScreen from '@/ui/screens/EventProgressionScreen';
 import { useLocalSearchParams } from 'expo-router';
 import { usePrProgression } from '@/hooks/usePrProgression';
+import { CHART_POINT_TEST_ID } from '@/ui/components/RecordChart';
 import type { RecordPoint } from '@/domain/models/recordPoint';
 
 // Two collaborators are mocked: the route-param reader (which competitor + event)
@@ -109,6 +110,17 @@ describe('EventProgressionScreen', () => {
     expect(screen.getByText(AVG_FIRST_TIME)).toBeTruthy();
     expect(screen.getByText(AVG_SECOND_DATE)).toBeTruthy();
     expect(screen.getByText(AVG_SECOND_TIME)).toBeTruthy();
+  });
+
+  it('plots the single and average progressions as charts', async () => {
+    mockProgressionState({ data: PROGRESSION, averages: AVERAGE_PROGRESSION });
+
+    await render(<EventProgressionScreen />);
+
+    // One marker per record across both charts.
+    expect(screen.getAllByTestId(CHART_POINT_TEST_ID)).toHaveLength(
+      PROGRESSION.length + AVERAGE_PROGRESSION.length,
+    );
   });
 
   it('shows an empty message when the competitor has no records for the event', async () => {
