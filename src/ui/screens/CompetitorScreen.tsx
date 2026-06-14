@@ -8,13 +8,14 @@
  * every WCA-backed screen must handle — loading, error (with retry), empty (a
  * competitor with no competed events), and the loaded event list.
  *
- * Event ids are shown raw for now (e.g. "333"); turning them into readable names
- * is the separate events.py port (a later slice).
+ * Events are shown by their display name (e.g. "3x3x3 Cube") via namedEvents,
+ * sorted alphabetically; navigation still carries the raw event id.
  */
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useCompetitorProfile } from '@/hooks/useCompetitorProfile';
+import { namedEvents } from '@/domain/services/events';
 import type { Profile } from '@/domain/models/profile';
 import { colors } from '@/ui/theme/colors';
 
@@ -100,18 +101,19 @@ function ProfileBody({ data, loading, error, onRetry, onSelectEvent }: ProfileBo
   if (eventIds.length === 0) {
     return <Text style={[styles.centered, styles.message]}>{EMPTY_MESSAGE}</Text>;
   }
+  const events = namedEvents(eventIds);
   return (
     <FlatList
-      data={eventIds}
-      keyExtractor={(eventId) => eventId}
+      data={events}
+      keyExtractor={(event) => event.eventId}
       ListHeaderComponent={<Text style={styles.eventsHeading}>{EVENTS_HEADING}</Text>}
       renderItem={({ item }) => (
         <Pressable
           style={styles.eventRow}
-          onPress={() => onSelectEvent(item)}
+          onPress={() => onSelectEvent(item.eventId)}
           accessibilityRole="button"
         >
-          <Text style={styles.eventRowText}>{item}</Text>
+          <Text style={styles.eventRowText}>{item.name}</Text>
         </Pressable>
       )}
     />
