@@ -31,6 +31,10 @@ const TIME_AXIS_CAPTION = 'Time →';
 
 const VIEWBOX_WIDTH = 320;
 const VIEWBOX_HEIGHT = 200;
+// Width-to-height ratio of the viewBox. The chart area takes the full available
+// width and derives its height from this, so the SVG fills edge-to-edge without
+// letterboxing (the aspect ratios match, so the uniform scale leaves no gutters).
+const CHART_ASPECT_RATIO = VIEWBOX_WIDTH / VIEWBOX_HEIGHT;
 const PADDING = 12;
 const AXIS_GUTTER_WIDTH = 40; // left strip reserved for the y-axis time labels
 const PLOT_LEFT = AXIS_GUTTER_WIDTH;
@@ -139,7 +143,8 @@ export function RecordChart({ singles, averages }: RecordChartProps) {
   return (
     <View style={styles.container}>
       <ChartLegend showAverage={averages.length > EMPTY_COUNT} />
-      <Svg width="100%" height={VIEWBOX_HEIGHT} viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}>
+      <View style={styles.chartArea}>
+        <Svg width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}>
         {ticks.map((tick, index) => (
           <Fragment key={tick.value}>
             <Line
@@ -179,7 +184,8 @@ export function RecordChart({ singles, averages }: RecordChartProps) {
         ) : null}
         {seriesMarkers(singles, scale, SINGLE_POINT_TEST_ID, SINGLE_COLOUR)}
         {seriesMarkers(averages, scale, AVERAGE_POINT_TEST_ID, AVERAGE_COLOUR)}
-      </Svg>
+        </Svg>
+      </View>
       <Text style={styles.caption}>{TIME_AXIS_CAPTION}</Text>
     </View>
   );
@@ -187,6 +193,7 @@ export function RecordChart({ singles, averages }: RecordChartProps) {
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 16, paddingVertical: 12 },
+  chartArea: { width: '100%', aspectRatio: CHART_ASPECT_RATIO },
   legend: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginBottom: 4 },
   legendEntry: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendSwatch: { width: 12, height: 12, borderRadius: 2 },
