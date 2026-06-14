@@ -25,9 +25,16 @@ See `CLAUDE.md` for the porting rules (test-first, vertical slices, the module m
 | `chart.py`         | `domain/services/chart.ts` (UI renders natively) | partial      | `8529b4a`    |
 | `web.py` (routes)  | `app/` routes + `ui/screens/`                   | partial       | pre-tracking |
 
-_Mobile screens so far: PersonSearch, Competitor, EventProgression (one combined
-SVG chart overlaying the single + average PR progressions — single blue, average
-green, shared time x-axis, time-labelled y-axis — above the two tables)._
+_Mobile screens so far: PersonSearch and Competitor. The Competitor screen shows
+the PR progression for one event at a time via the EventProgression component
+(one combined SVG chart overlaying the single + average progressions — single
+blue, average green, shared time x-axis, time-labelled y-axis — above the two
+tables). Event selection lives on this screen: an on-page EventPicker dropdown
+listing the competitor's competed events, defaulting to 3x3x3 (`defaultEventId`)._
+
+_**Mobile-specific UX, not a port of `web.py`:** the web app uses a page per
+event; mobile collapses that into one screen with an on-page event dropdown and
+a 3x3x3 default. There is intentionally no separate per-event route/screen._
 
 _`chart.py` is **partial**: `toRecordSeries` is ported for timed events only.
 The Multi-Blind (`333mbf`, plotted by points) and Fewest-Moves (`333fm`, averages
