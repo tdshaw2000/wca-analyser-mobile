@@ -1,4 +1,4 @@
-import { namedEvents, eventName } from '@/domain/services/events';
+import { namedEvents, eventName, defaultEventId, DEFAULT_EVENT_ID } from '@/domain/services/events';
 import type { NamedEvent } from '@/domain/models/namedEvent';
 
 // Ported from the Python source's tests/test_events.py.
@@ -22,6 +22,24 @@ describe('namedEvents', () => {
     expect(namedEvents([UNKNOWN_EVENT_ID])).toEqual([
       { eventId: UNKNOWN_EVENT_ID, name: UNKNOWN_EVENT_ID },
     ]);
+  });
+});
+
+describe('defaultEventId', () => {
+  // 3x3x3 is the universal event, so it is the preferred default when present.
+  it('returns 3x3x3 when the competitor competed in it', () => {
+    expect(defaultEventId(['pyram', '333', '222'])).toBe(DEFAULT_EVENT_ID);
+  });
+
+  // A blind/feet-only competitor may never have done 3x3x3; fall back to the
+  // first event by the same alphabetical-by-name order the picker shows.
+  it('returns the first event by display name when 3x3x3 is absent', () => {
+    // '555' (5x5x5 Cube) sorts before 'pyram' (Pyraminx).
+    expect(defaultEventId(['pyram', '555'])).toBe('555');
+  });
+
+  it('returns an empty string for no events', () => {
+    expect(defaultEventId([])).toBe('');
   });
 });
 
