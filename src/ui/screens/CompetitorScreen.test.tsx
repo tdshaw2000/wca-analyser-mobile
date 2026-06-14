@@ -87,15 +87,17 @@ describe('CompetitorScreen', () => {
     expect(screen.getByTestId(LOADING_TEST_ID)).toBeTruthy();
   });
 
-  it('renders the avatar and the competed event ids once loaded', async () => {
+  it('renders the avatar and the competed event display names once loaded', async () => {
     mockProfileState({ data: PROFILE });
 
     await render(<CompetitorScreen />);
 
     expect(screen.getByTestId(AVATAR_TEST_ID).props.source).toEqual({ uri: AVATAR_THUMB_URL });
-    expect(screen.getByText('222')).toBeTruthy();
-    expect(screen.getByText('333')).toBeTruthy();
-    expect(screen.getByText('pyram')).toBeTruthy();
+    expect(screen.getByText('2x2x2 Cube')).toBeTruthy();
+    expect(screen.getByText('3x3x3 Cube')).toBeTruthy();
+    expect(screen.getByText('Pyraminx')).toBeTruthy();
+    // The raw ids are no longer shown.
+    expect(screen.queryByText('333')).toBeNull();
   });
 
   it('shows an empty message when the competitor has no competed events', async () => {
@@ -122,7 +124,8 @@ describe('CompetitorScreen', () => {
     mockProfileState({ data: PROFILE });
 
     await render(<CompetitorScreen />);
-    await fireEvent.press(screen.getByText('333'));
+    // The row shows the name; navigation still carries the raw event id.
+    await fireEvent.press(screen.getByText('3x3x3 Cube'));
 
     expect(push).toHaveBeenCalledWith({
       pathname: '/person/[id]/[event]',
