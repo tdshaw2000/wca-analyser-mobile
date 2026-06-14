@@ -25,14 +25,21 @@ See `CLAUDE.md` for the porting rules (test-first, vertical slices, the module m
 | `chart.py`         | `domain/services/chart.ts` (UI renders natively) | partial      | `8529b4a`    |
 | `web.py` (routes)  | `app/` routes + `ui/screens/`                   | partial       | pre-tracking |
 
-_Mobile screens so far: PersonSearch, Competitor, EventProgression (an SVG line
-chart over each of the single and average PR progressions, above its table)._
+_Mobile screens so far: PersonSearch, Competitor, EventProgression (one combined
+SVG chart overlaying the single + average PR progressions — single blue, average
+green, shared time x-axis, time-labelled y-axis — above the two tables)._
 
 _`chart.py` is **partial**: `toRecordSeries` is ported for timed events only.
 The Multi-Blind (`333mbf`, plotted by points) and Fewest-Moves (`333fm`, averages
 scaled to moves) branches, plus `to_consistency_series`, are not yet ported — they
 depend on `format_single`/`format_average`/`decode_multi_blind`, which formatting.ts
 also still lacks (only `format_time` is ported, despite the row above)._
+
+_The chart **rendering** logic from `static/records-chart.js` (no pytest — the JS
+is the spec) is ported: `resultBounds`/`dateBounds`/`formatAxisTick` in chart.ts,
+and `RecordChart` (the Chart.js line chart, redrawn as hand-rolled SVG). Not yet
+ported: the moves/points tick branch, the "All results" scatter (`scatter-chart.js`),
+and the consistency chart (`consistency-chart.js`)._
 
 ## Backlog (Python features not yet ported)
 

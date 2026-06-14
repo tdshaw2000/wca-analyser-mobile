@@ -2,12 +2,12 @@
  * Event PR-progression screen. Reached by tapping a competed-event row on the
  * CompetitorScreen. Reads the competitor id, event id (and optional name) from
  * the route params, fetches the single- and average-record progressions via
- * usePrProgression, and renders each as a labelled, chronological table of
- * date + personal-record time.
+ * usePrProgression, and renders one combined chart (both series overlaid) above
+ * a labelled, chronological table of date + personal-record time for each.
  *
  * Dumb by design: all fetching/computation lives in the hook. It renders the
  * four states every WCA-backed screen must handle — loading, error (with retry),
- * empty (no records of either kind yet), and the loaded progression tables.
+ * empty (no records of either kind yet), and the loaded chart + tables.
  *
  * The event is shown as its raw id (e.g. "333"); readable names are the separate
  * events.py port (a later slice).
