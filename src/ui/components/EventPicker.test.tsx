@@ -16,33 +16,33 @@ const OTHER_NAME = 'Pyraminx';
 const OTHER_ID = 'pyram';
 
 describe('EventPicker', () => {
-  it('shows the selected event display name on the trigger', () => {
-    render(<EventPicker events={EVENTS} selectedEventId={SELECTED_ID} onSelect={jest.fn()} />);
+  it('shows the selected event display name on the trigger', async () => {
+    await render(<EventPicker events={EVENTS} selectedEventId={SELECTED_ID} onSelect={jest.fn()} />);
 
     expect(screen.getByTestId(EVENT_PICKER_TRIGGER_TEST_ID)).toBeTruthy();
     expect(screen.getByText(SELECTED_NAME)).toBeTruthy();
   });
 
-  it('keeps the other events hidden until the trigger is pressed', () => {
-    render(<EventPicker events={EVENTS} selectedEventId={SELECTED_ID} onSelect={jest.fn()} />);
+  it('keeps the other events hidden until the trigger is pressed', async () => {
+    await render(<EventPicker events={EVENTS} selectedEventId={SELECTED_ID} onSelect={jest.fn()} />);
 
     expect(screen.queryByText(OTHER_NAME)).toBeNull();
   });
 
-  it('reveals the full event list when the trigger is pressed', () => {
-    render(<EventPicker events={EVENTS} selectedEventId={SELECTED_ID} onSelect={jest.fn()} />);
+  it('reveals the full event list when the trigger is pressed', async () => {
+    await render(<EventPicker events={EVENTS} selectedEventId={SELECTED_ID} onSelect={jest.fn()} />);
 
-    fireEvent.press(screen.getByTestId(EVENT_PICKER_TRIGGER_TEST_ID));
+    await fireEvent.press(screen.getByTestId(EVENT_PICKER_TRIGGER_TEST_ID));
 
     expect(screen.getByText(OTHER_NAME)).toBeTruthy();
   });
 
-  it('reports the chosen event id and closes the list when an event is picked', () => {
+  it('reports the chosen event id and closes the list when an event is picked', async () => {
     const onSelect = jest.fn();
-    render(<EventPicker events={EVENTS} selectedEventId={SELECTED_ID} onSelect={onSelect} />);
+    await render(<EventPicker events={EVENTS} selectedEventId={SELECTED_ID} onSelect={onSelect} />);
 
-    fireEvent.press(screen.getByTestId(EVENT_PICKER_TRIGGER_TEST_ID));
-    fireEvent.press(screen.getByText(OTHER_NAME));
+    await fireEvent.press(screen.getByTestId(EVENT_PICKER_TRIGGER_TEST_ID));
+    await fireEvent.press(screen.getByText(OTHER_NAME));
 
     expect(onSelect).toHaveBeenCalledWith(OTHER_ID);
     // The list closes again, so the picked event is no longer listed below the trigger.
