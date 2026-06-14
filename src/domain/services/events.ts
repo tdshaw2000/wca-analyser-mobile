@@ -31,6 +31,11 @@ const EVENT_NAMES: Record<string, string> = {
 const BEFORE = -1;
 const AFTER = 1;
 const SAME = 0;
+const FIRST = 0;
+const NO_EVENTS = '';
+
+/** 3x3x3 — the event nearly every competitor does, so the default selection. */
+export const DEFAULT_EVENT_ID = '333';
 
 /**
  * The display name for an event id. Unlike the Python source (which KeyErrors on
@@ -49,4 +54,14 @@ export function namedEvents(eventIds: string[]): NamedEvent[] {
     if (first.name > second.name) return AFTER;
     return SAME;
   });
+}
+
+/**
+ * The event to show first for a competitor: 3x3x3 if they competed in it,
+ * otherwise the first of their events by display name (matching the picker's
+ * order). Returns an empty string when they have no events.
+ */
+export function defaultEventId(eventIds: string[]): string {
+  if (eventIds.includes(DEFAULT_EVENT_ID)) return DEFAULT_EVENT_ID;
+  return namedEvents(eventIds)[FIRST]?.eventId ?? NO_EVENTS;
 }
