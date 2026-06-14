@@ -9,8 +9,7 @@
  * four states every WCA-backed screen must handle — loading, error (with retry),
  * empty (no records of either kind yet), and the loaded chart + tables.
  *
- * The event is shown as its raw id (e.g. "333"); readable names are the separate
- * events.py port (a later slice).
+ * The heading shows the event's display name (e.g. "3x3x3 Cube") via eventName.
  */
 import { useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -18,6 +17,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { usePrProgression } from '@/hooks/usePrProgression';
 import { formatTime } from '@/domain/services/formatting';
 import { toRecordSeries } from '@/domain/services/chart';
+import { eventName } from '@/domain/services/events';
 import { RecordChart } from '@/ui/components/RecordChart';
 import type { RecordPoint } from '@/domain/models/recordPoint';
 import { colors } from '@/ui/theme/colors';
@@ -48,7 +48,7 @@ export default function EventProgressionScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.heading}>{event}</Text>
+        <Text style={styles.heading}>{eventName(event)}</Text>
         <Text style={styles.subtitle}>{name ?? id}</Text>
       </View>
       <ProgressionBody
