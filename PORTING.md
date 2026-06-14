@@ -21,7 +21,7 @@ See `CLAUDE.md` for the porting rules (test-first, vertical slices, the module m
 | `wca_client.py`    | `data/api/wcaClient.ts` + `types.ts` + `data/repositories/` | ported    | pre-tracking |
 | `records.py`       | `domain/services/records.ts`                    | ported        | pre-tracking |
 | `formatting.py`    | `domain/services/formatting.ts`                 | ported        | pre-tracking |
-| `events.py`        | `domain/` (event id → name table)               | not started   | —            |
+| `events.py`        | `domain/services/events.ts` + `models/namedEvent.ts` | ported   | `7371c58`    |
 | `chart.py`         | `domain/services/chart.ts` (UI renders natively) | partial      | `8529b4a`    |
 | `web.py` (routes)  | `app/` routes + `ui/screens/`                   | partial       | pre-tracking |
 
@@ -48,7 +48,6 @@ and the consistency chart (`consistency-chart.js`)._
   `format_average`, `format_consistency`, and `decode_multi_blind` ported into
   formatting.ts first (each test-first), then the chart cases, then the native
   component handles the new event units. `RecordChart` already renders timed events.
-- Port the `events.py` id → name table when a screen needs event names.
 
 ## Workflow for any slice (new feature OR drift fix)
 
