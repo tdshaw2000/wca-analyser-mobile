@@ -17,6 +17,8 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 
 import { usePrProgression } from '@/hooks/usePrProgression';
 import { formatTime } from '@/domain/services/formatting';
+import { toRecordSeries } from '@/domain/services/chart';
+import { RecordChart } from '@/ui/components/RecordChart';
 import type { RecordPoint } from '@/domain/models/recordPoint';
 import { colors } from '@/ui/theme/colors';
 
@@ -107,6 +109,7 @@ function RecordTable({ heading, points }: RecordTableProps) {
   return (
     <View style={styles.section}>
       <Text style={styles.sectionHeading}>{heading}</Text>
+      <RecordChart points={toRecordSeries(points)} />
       {points.map((point) => (
         <View key={point.date} style={styles.row}>
           <Text style={styles.rowDate}>{point.date}</Text>
