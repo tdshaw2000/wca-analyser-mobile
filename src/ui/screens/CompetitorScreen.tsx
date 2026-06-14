@@ -1,32 +1,34 @@
 /**
  * Competitor screen. Reached from a search result via /person/[id]. Reads the
- * WCA id (and optional name) from the route params, then fetches the profile via
- * useCompetitorProfile and renders the competitor's avatar plus the events they
- * have competed in.
+ * WCA id (and optional name) from the route params, fetches the profile via
+ * useCompetitorProfile, and shows the competitor's PR progression for one event
+ * at a time — defaulting to 3x3x3 — with an on-page dropdown to switch events.
  *
- * Dumb by design: all fetching lives in the hook. It renders the four states
- * every WCA-backed screen must handle — loading, error (with retry), empty (a
- * competitor with no competed events), and the loaded event list.
+ * Event selection lives here (not on a separate route): the EventPicker offers
+ * the competitor's competed events, and usePrProgression is driven by whichever
+ * is selected. Dumb by design — fetching/computation live in the hooks, and the
+ * progression's loading/error/empty/loaded states live in EventProgression.
  *
- * Events are shown by their display name (e.g. "3x3x3 Cube") via namedEvents,
- * sorted alphabetically; navigation still carries the raw event id.
+ * The screen handles its own profile states: loading, error (with retry), and
+ * empty (a competitor with no competed events, so no picker is shown).
  */
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, FlatList, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
+import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useCompetitorProfile } from '@/hooks/useCompetitorProfile';
-import { namedEvents } from '@/domain/services/events';
-import type { Profile } from '@/domain/models/profile';
+import { usePrProgression } from '@/hooks/usePrProgression';
+import { namedEvents, defaultEventId } from '@/domain/services/events';
+import { EventPicker } from '@/ui/components/EventPicker';
+import { EventProgression } from '@/ui/components/EventProgression';
 import { colors } from '@/ui/theme/colors';
 
-const EVENTS_HEADING = 'Competed events';
-const EMPTY_MESSAGE = 'No competed events recorded.';
 const GENERIC_ERROR_MESSAGE = 'Something went wrong. Please try again.';
 const RETRY_BUTTON_LABEL = 'Try again';
+const EMPTY_MESSAGE = 'No competed events recorded.';
 const LOADING_TEST_ID = 'competitor-loading';
 const AVATAR_TEST_ID = 'competitor-avatar';
-// expo-router route pattern; [id] and [event] are filled from params.
-const EVENT_PROGRESSION_ROUTE = '/person/[id]/[event]';
+const NO_EVENTS = 0;
 
 // A `type` (not `interface`): useLocalSearchParams constrains its generic to
 // Record<string, string | string[]>, which only type aliases satisfy (they get
@@ -41,11 +43,14 @@ type CompetitorRouteParams = {
 export default function CompetitorScreen() {
   const { id, name } = useLocalSearchParams<CompetitorRouteParams>();
   const { data, loading, error, reload } = useCompetitorProfile(id);
-  const router = useRouter();
 
-  function openEvent(eventId: string) {
-    router.push({ pathname: EVENT_PROGRESSION_ROUTE, params: { id, event: eventId, name } });
-  }
+  // The picked event overrides the default; the default is 3x3x3 (or, for a
+  // competitor who never did it, their first event by name). Both are empty
+  // until the profile loads, which keeps usePrProgression idle in the meantime.
+  const eventIds = data?.eventIds ?? [];
+  const [pickedEventId, setPickedEventId] = useState<string | null>(null);
+  const selectedEventId = pickedEventId ?? defaultEventId(eventIds);
+  const progression = usePrProgression(id, selectedEventId);
 
   return (
     <View style={styles.container}>
@@ -63,25 +68,37 @@ export default function CompetitorScreen() {
         </View>
       </View>
       <ProfileBody
-        data={data}
+        eventIds={eventIds}
+        selectedEventId={selectedEventId}
+        onSelectEvent={setPickedEventId}
         loading={loading}
         error={error}
-        onRetry={reload}
-        onSelectEvent={openEvent}
+        onRetryProfile={reload}
+        progression={progression}
       />
     </View>
   );
 }
 
 interface ProfileBodyProps {
-  data: Profile | null;
+  eventIds: string[];
+  selectedEventId: string;
+  onSelectEvent: (eventId: string) => void;
   loading: boolean;
   error: Error | null;
-  onRetry: () => void;
-  onSelectEvent: (eventId: string) => void;
+  onRetryProfile: () => void;
+  progression: ReturnType<typeof usePrProgression>;
 }
 
-function ProfileBody({ data, loading, error, onRetry, onSelectEvent }: ProfileBodyProps) {
+function ProfileBody({
+  eventIds,
+  selectedEventId,
+  onSelectEvent,
+  loading,
+  error,
+  onRetryProfile,
+  progression,
+}: ProfileBodyProps) {
   if (loading) {
     return (
       <ActivityIndicator testID={LOADING_TEST_ID} style={styles.centered} color={colors.primary} />
@@ -91,32 +108,30 @@ function ProfileBody({ data, loading, error, onRetry, onSelectEvent }: ProfileBo
     return (
       <View style={styles.centered}>
         <Text style={styles.message}>{error.message || GENERIC_ERROR_MESSAGE}</Text>
-        <Pressable style={styles.button} onPress={onRetry} accessibilityRole="button">
+        <Pressable style={styles.button} onPress={onRetryProfile} accessibilityRole="button">
           <Text style={styles.buttonLabel}>{RETRY_BUTTON_LABEL}</Text>
         </Pressable>
       </View>
     );
   }
-  const eventIds = data?.eventIds ?? [];
-  if (eventIds.length === 0) {
+  if (eventIds.length === NO_EVENTS) {
     return <Text style={[styles.centered, styles.message]}>{EMPTY_MESSAGE}</Text>;
   }
-  const events = namedEvents(eventIds);
   return (
-    <FlatList
-      data={events}
-      keyExtractor={(event) => event.eventId}
-      ListHeaderComponent={<Text style={styles.eventsHeading}>{EVENTS_HEADING}</Text>}
-      renderItem={({ item }) => (
-        <Pressable
-          style={styles.eventRow}
-          onPress={() => onSelectEvent(item.eventId)}
-          accessibilityRole="button"
-        >
-          <Text style={styles.eventRowText}>{item.name}</Text>
-        </Pressable>
-      )}
-    />
+    <>
+      <EventPicker
+        events={namedEvents(eventIds)}
+        selectedEventId={selectedEventId}
+        onSelect={onSelectEvent}
+      />
+      <EventProgression
+        singles={progression.data}
+        averages={progression.averages}
+        loading={progression.loading}
+        error={progression.error}
+        onRetry={progression.reload}
+      />
+    </>
   );
 }
 
@@ -137,21 +152,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonLabel: { color: '#ffffff', fontWeight: '600' },
-  eventsHeading: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.muted,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 4,
-    textTransform: 'uppercase',
-  },
-  eventRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.card,
-  },
-  eventRowText: { fontSize: 16, color: colors.text },
 });
