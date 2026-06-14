@@ -91,6 +91,7 @@ function ProgressionBody({ singles, averages, loading, error, onRetry }: Progres
   }
   return (
     <ScrollView contentContainerStyle={styles.tables}>
+      <RecordChart singles={toRecordSeries(singles)} averages={toRecordSeries(averages)} />
       <RecordTable heading={SINGLE_TABLE_HEADING} points={singles} />
       <RecordTable heading={AVERAGE_TABLE_HEADING} points={averages} />
     </ScrollView>
@@ -109,7 +110,6 @@ function RecordTable({ heading, points }: RecordTableProps) {
   return (
     <View style={styles.section}>
       <Text style={styles.sectionHeading}>{heading}</Text>
-      <RecordChart points={toRecordSeries(points)} />
       {points.map((point) => (
         <View key={point.date} style={styles.row}>
           <Text style={styles.rowDate}>{point.date}</Text>
