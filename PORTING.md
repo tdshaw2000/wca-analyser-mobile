@@ -30,7 +30,10 @@ the PR progression for one event at a time via the EventProgression component
 (one combined SVG chart overlaying the single + average progressions — single
 blue, average green, shared time x-axis, time-labelled y-axis — above the two
 tables). Event selection lives on this screen: an on-page EventPicker dropdown
-listing the competitor's competed events, defaulting to 3x3x3 (`defaultEventId`)._
+listing the competitor's competed events, defaulting to 3x3x3 (`defaultEventId`).
+It also shows a "View WCA profile" link (the web template's `profile_url` /
+`profile-link`), which hands the URL to the OS via `Linking.openURL` to open the
+competitor's public WCA profile in the device's default browser._
 
 _**Mobile-specific UX, not a port of `web.py`:** the web app uses a page per
 event; mobile collapses that into one screen with an on-page event dropdown and
