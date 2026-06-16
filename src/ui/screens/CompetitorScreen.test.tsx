@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react-native';
+import { Linking } from 'react-native';
 
 import CompetitorScreen from '@/ui/screens/CompetitorScreen';
 import { useLocalSearchParams } from 'expo-router';
@@ -49,6 +50,7 @@ const LOADING_TEST_ID = 'competitor-loading';
 const AVATAR_TEST_ID = 'competitor-avatar';
 const RETRY_LABEL = 'Try again';
 const EMPTY_MESSAGE = 'No competed events recorded.';
+const PROFILE_LINK_LABEL = 'View WCA profile';
 
 function mockProfileState(overrides: Partial<ReturnType<typeof useCompetitorProfile>>) {
   useCompetitorProfileMock.mockReturnValue({
@@ -132,6 +134,17 @@ describe('CompetitorScreen', () => {
     await fireEvent.press(screen.getByText(OTHER_EVENT_NAME));
 
     expect(usePrProgressionMock).toHaveBeenLastCalledWith(WCA_ID, OTHER_EVENT_ID);
+  });
+
+  it('opens the WCA profile in the default browser when the profile link is pressed', async () => {
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+    mockProfileState({ data: PROFILE });
+
+    await render(<CompetitorScreen />);
+    await fireEvent.press(screen.getByText(PROFILE_LINK_LABEL));
+
+    expect(openURL).toHaveBeenCalledWith(PROFILE.person.profileUrl);
+    openURL.mockRestore();
   });
 
   it('shows an empty message and no picker when there are no competed events', async () => {

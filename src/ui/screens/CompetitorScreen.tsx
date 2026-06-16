@@ -17,6 +17,7 @@ import { useLocalSearchParams } from 'expo-router';
 import {
   ActivityIndicator,
   Image,
+  Linking,
   Pressable,
   StyleSheet,
   Text,
@@ -34,6 +35,7 @@ import { colors } from '@/ui/theme/colors';
 const GENERIC_ERROR_MESSAGE = 'Something went wrong. Please try again.';
 const RETRY_BUTTON_LABEL = 'Try again';
 const EMPTY_MESSAGE = 'No competed events recorded.';
+const PROFILE_LINK_LABEL = 'View WCA profile';
 const LOADING_TEST_ID = 'competitor-loading';
 const AVATAR_TEST_ID = 'competitor-avatar';
 const NO_EVENTS = 0;
@@ -83,10 +85,18 @@ export default function CompetitorScreen() {
               style={styles.avatar}
             />
           ) : null}
-          <View style={styles.identity}>
+          <View style={[styles.identity, isLandscape && styles.identityLandscape]}>
             <Text style={styles.heading}>{name ?? id}</Text>
             <Text style={styles.wcaId}>{id}</Text>
           </View>
+          {data?.person.profileUrl ? (
+            <Pressable
+              onPress={() => Linking.openURL(data.person.profileUrl)}
+              accessibilityRole="link"
+            >
+              <Text style={styles.profileLink}>{PROFILE_LINK_LABEL}</Text>
+            </Pressable>
+          ) : null}
         </View>
         {showPicker ? (
           <View style={isLandscape ? styles.pickerLandscape : undefined}>
@@ -155,8 +165,12 @@ const styles = StyleSheet.create({
   pickerLandscape: { width: LANDSCAPE_PICKER_WIDTH, paddingTop: 24 },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.card },
   identity: { flex: 1, gap: 4 },
+  // Landscape: don't let the identity expand, so the profile link sits next to
+  // the name/ID rather than being pushed against the event picker on the right.
+  identityLandscape: { flex: 0 },
   heading: { fontSize: 22, fontWeight: '700', color: colors.text },
   wcaId: { fontSize: 14, color: colors.muted },
+  profileLink: { fontSize: 14, color: colors.primary, fontWeight: '600' },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 12 },
   message: { color: colors.muted, fontSize: 15, textAlign: 'center' },
   button: {
