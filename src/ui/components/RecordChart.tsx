@@ -39,7 +39,7 @@ const CHART_ASPECT_RATIO = VIEWBOX_WIDTH / VIEWBOX_HEIGHT;
 // In landscape the full screen width would make the aspect-locked chart taller
 // than the viewport, so cap its height to a fraction of the window and derive
 // the matching max width — keeping the ratio (no letterboxing) and centring it.
-const LANDSCAPE_CHART_HEIGHT_FRACTION = 0.5;
+const LANDSCAPE_CHART_HEIGHT_FRACTION = 0.45;
 const PADDING = 12;
 const AXIS_GUTTER_WIDTH = 40; // left strip reserved for the y-axis time labels
 
