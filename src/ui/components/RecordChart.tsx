@@ -10,8 +10,9 @@
  * labelled with time ticks; the higher (slower) times sit at the top, so a
  * progression — a running minimum — descends and reads as improvement.
  */
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import type { LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 
 import { dateBounds, resultBounds, formatAxisTick } from '@/domain/services/chart';
@@ -156,22 +157,36 @@ function LegendEntry({ colour, label }: { colour: string; label: string }) {
 export function RecordChart({ singles, averages }: RecordChartProps) {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const isLandscape = windowWidth > windowHeight;
+  // Landscape fills the width and caps the height, so the box is wider than the
+  // portrait 1.6 shape. We measure its real pixels and use them as the viewBox
+  // so the plot stretches edge-to-edge with no letterboxing.
+  const [measured, setMeasured] = useState<{ width: number; height: number } | null>(null);
 
   const allPoints = [...singles, ...averages];
   if (allPoints.length === EMPTY_COUNT) return null;
 
-  const rect = plotRect(VIEWBOX_WIDTH, VIEWBOX_HEIGHT);
+  const useMeasured = isLandscape && measured !== null;
+  const viewBoxWidth = useMeasured ? measured.width : VIEWBOX_WIDTH;
+  const viewBoxHeight = useMeasured ? measured.height : VIEWBOX_HEIGHT;
+  const rect = plotRect(viewBoxWidth, viewBoxHeight);
   const scale = buildScale(allPoints, rect);
   const ticks = yAxisTicks(allPoints, rect);
-  const landscapeCap = isLandscape
-    ? { maxWidth: windowHeight * LANDSCAPE_CHART_HEIGHT_FRACTION * CHART_ASPECT_RATIO }
-    : null;
+  const chartAreaSize = isLandscape
+    ? { height: windowHeight * LANDSCAPE_CHART_HEIGHT_FRACTION }
+    : styles.chartAreaPortrait;
+
+  function measure(event: LayoutChangeEvent) {
+    const { width, height } = event.nativeEvent.layout;
+    setMeasured((previous) =>
+      previous?.width === width && previous?.height === height ? previous : { width, height },
+    );
+  }
 
   return (
     <View style={styles.container}>
       <ChartLegend showAverage={averages.length > EMPTY_COUNT} />
-      <View style={[styles.chartArea, landscapeCap]}>
-        <Svg width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}>
+      <View style={[styles.chartArea, chartAreaSize]} onLayout={measure}>
+        <Svg width="100%" height="100%" viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}>
         {ticks.map((tick, index) => (
           <Fragment key={tick.value}>
             <Line
@@ -220,7 +235,8 @@ export function RecordChart({ singles, averages }: RecordChartProps) {
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 16, paddingVertical: 12 },
-  chartArea: { width: '100%', aspectRatio: CHART_ASPECT_RATIO, alignSelf: 'center' },
+  chartArea: { width: '100%' },
+  chartAreaPortrait: { aspectRatio: CHART_ASPECT_RATIO },
   legend: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginBottom: 4 },
   legendEntry: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendSwatch: { width: 12, height: 12, borderRadius: 2 },
