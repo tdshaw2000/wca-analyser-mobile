@@ -14,7 +14,15 @@
  */
 import { useState } from 'react';
 import { useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
 import { useCompetitorProfile } from '@/hooks/useCompetitorProfile';
 import { usePrProgression } from '@/hooks/usePrProgression';
@@ -29,6 +37,9 @@ const EMPTY_MESSAGE = 'No competed events recorded.';
 const LOADING_TEST_ID = 'competitor-loading';
 const AVATAR_TEST_ID = 'competitor-avatar';
 const NO_EVENTS = 0;
+// Width the event picker is pinned to when it sits beside the profile in
+// landscape; the profile details take the rest of the row.
+const LANDSCAPE_PICKER_WIDTH = 260;
 
 // A `type` (not `interface`): useLocalSearchParams constrains its generic to
 // Record<string, string | string[]>, which only type aliases satisfy (they get
@@ -44,6 +55,11 @@ export default function CompetitorScreen() {
   const { id, name } = useLocalSearchParams<CompetitorRouteParams>();
   const { data, loading, error, reload } = useCompetitorProfile(id);
 
+  // Landscape has room to set the event picker beside the profile rather than
+  // stacked beneath it, reclaiming vertical space for the progression chart.
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+
   // The picked event overrides the default; the default is 3x3x3 (or, for a
   // competitor who never did it, their first event by name). Both are empty
   // until the profile loads, which keeps usePrProgression idle in the meantime.
@@ -52,25 +68,38 @@ export default function CompetitorScreen() {
   const selectedEventId = pickedEventId ?? defaultEventId(eventIds);
   const progression = usePrProgression(id, selectedEventId);
 
+  // The picker exists only once the profile has loaded with at least one event
+  // — the same condition under which ProfileBody shows the progression.
+  const showPicker = !loading && !error && eventIds.length > NO_EVENTS;
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        {data?.person.avatarThumbUrl ? (
-          <Image
-            testID={AVATAR_TEST_ID}
-            source={{ uri: data.person.avatarThumbUrl }}
-            style={styles.avatar}
-          />
-        ) : null}
-        <View style={styles.identity}>
-          <Text style={styles.heading}>{name ?? id}</Text>
-          <Text style={styles.wcaId}>{id}</Text>
+      <View style={isLandscape ? styles.topSectionLandscape : undefined}>
+        <View style={[styles.header, isLandscape && styles.headerFlex]}>
+          {data?.person.avatarThumbUrl ? (
+            <Image
+              testID={AVATAR_TEST_ID}
+              source={{ uri: data.person.avatarThumbUrl }}
+              style={styles.avatar}
+            />
+          ) : null}
+          <View style={styles.identity}>
+            <Text style={styles.heading}>{name ?? id}</Text>
+            <Text style={styles.wcaId}>{id}</Text>
+          </View>
         </View>
+        {showPicker ? (
+          <View style={isLandscape ? styles.pickerLandscape : undefined}>
+            <EventPicker
+              events={namedEvents(eventIds)}
+              selectedEventId={selectedEventId}
+              onSelect={setPickedEventId}
+            />
+          </View>
+        ) : null}
       </View>
       <ProfileBody
         eventIds={eventIds}
-        selectedEventId={selectedEventId}
-        onSelectEvent={setPickedEventId}
         loading={loading}
         error={error}
         onRetryProfile={reload}
@@ -82,23 +111,13 @@ export default function CompetitorScreen() {
 
 interface ProfileBodyProps {
   eventIds: string[];
-  selectedEventId: string;
-  onSelectEvent: (eventId: string) => void;
   loading: boolean;
   error: Error | null;
   onRetryProfile: () => void;
   progression: ReturnType<typeof usePrProgression>;
 }
 
-function ProfileBody({
-  eventIds,
-  selectedEventId,
-  onSelectEvent,
-  loading,
-  error,
-  onRetryProfile,
-  progression,
-}: ProfileBodyProps) {
+function ProfileBody({ eventIds, loading, error, onRetryProfile, progression }: ProfileBodyProps) {
   if (loading) {
     return (
       <ActivityIndicator testID={LOADING_TEST_ID} style={styles.centered} color={colors.primary} />
@@ -118,26 +137,22 @@ function ProfileBody({
     return <Text style={[styles.centered, styles.message]}>{EMPTY_MESSAGE}</Text>;
   }
   return (
-    <>
-      <EventPicker
-        events={namedEvents(eventIds)}
-        selectedEventId={selectedEventId}
-        onSelect={onSelectEvent}
-      />
-      <EventProgression
-        singles={progression.data}
-        averages={progression.averages}
-        loading={progression.loading}
-        error={progression.error}
-        onRetry={progression.reload}
-      />
-    </>
+    <EventProgression
+      singles={progression.data}
+      averages={progression.averages}
+      loading={progression.loading}
+      error={progression.error}
+      onRetry={progression.reload}
+    />
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
+  topSectionLandscape: { flexDirection: 'row', alignItems: 'flex-start' },
   header: { flexDirection: 'row', alignItems: 'center', gap: 16, padding: 24 },
+  headerFlex: { flex: 1 },
+  pickerLandscape: { width: LANDSCAPE_PICKER_WIDTH, paddingTop: 24 },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.card },
   identity: { flex: 1, gap: 4 },
   heading: { fontSize: 22, fontWeight: '700', color: colors.text },
