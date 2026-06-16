@@ -41,14 +41,30 @@ const CHART_ASPECT_RATIO = VIEWBOX_WIDTH / VIEWBOX_HEIGHT;
 const LANDSCAPE_CHART_HEIGHT_FRACTION = 0.5;
 const PADDING = 12;
 const AXIS_GUTTER_WIDTH = 40; // left strip reserved for the y-axis time labels
-const PLOT_LEFT = AXIS_GUTTER_WIDTH;
-const PLOT_RIGHT = VIEWBOX_WIDTH - PADDING;
-const PLOT_TOP = PADDING;
-const PLOT_BOTTOM = VIEWBOX_HEIGHT - PADDING;
-const PLOT_WIDTH = PLOT_RIGHT - PLOT_LEFT;
-const PLOT_HEIGHT = PLOT_BOTTOM - PLOT_TOP;
-const HORIZONTAL_CENTRE = PLOT_LEFT + PLOT_WIDTH / 2;
-const VERTICAL_CENTRE = PLOT_TOP + PLOT_HEIGHT / 2;
+
+interface PlotRect {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+  width: number;
+  height: number;
+  centreX: number;
+  centreY: number;
+}
+
+// The plot rectangle inside a viewBox of the given size: a fixed left gutter for
+// the y-axis labels and uniform padding elsewhere. Derived from the actual box
+// so the chart can fill a portrait or a wide landscape area with the same code.
+function plotRect(viewBoxWidth: number, viewBoxHeight: number): PlotRect {
+  const left = AXIS_GUTTER_WIDTH;
+  const right = viewBoxWidth - PADDING;
+  const top = PADDING;
+  const bottom = viewBoxHeight - PADDING;
+  const width = right - left;
+  const height = bottom - top;
+  return { left, right, top, bottom, width, height, centreX: left + width / 2, centreY: top + height / 2 };
+}
 
 const MARKER_RADIUS = 3.5;
 const LINE_WIDTH = 2;
@@ -71,7 +87,7 @@ interface Scale {
   y: (value: number) => number;
 }
 
-function buildScale(allPoints: ChartPoint[]): Scale {
+function buildScale(allPoints: ChartPoint[], rect: PlotRect): Scale {
   const values = resultBounds(allPoints);
   const dates = dateBounds(allPoints);
   const earliest = Date.parse(dates.min);
@@ -81,12 +97,12 @@ function buildScale(allPoints: ChartPoint[]): Scale {
   return {
     x: (date) =>
       dateSpan === ZERO_SPAN
-        ? HORIZONTAL_CENTRE
-        : PLOT_LEFT + ((Date.parse(date) - earliest) / dateSpan) * PLOT_WIDTH,
+        ? rect.centreX
+        : rect.left + ((Date.parse(date) - earliest) / dateSpan) * rect.width,
     y: (value) =>
       valueSpan === ZERO_SPAN
-        ? VERTICAL_CENTRE
-        : PLOT_TOP + ((values.max - value) / valueSpan) * PLOT_HEIGHT,
+        ? rect.centreY
+        : rect.top + ((values.max - value) / valueSpan) * rect.height,
   };
 }
 
@@ -109,12 +125,12 @@ function seriesMarkers(points: ChartPoint[], scale: Scale, testID: string, colou
 
 // Evenly spaced result-axis ticks between the padded bounds, each a gridline plus
 // a time label down the left gutter.
-function yAxisTicks(allPoints: ChartPoint[]) {
+function yAxisTicks(allPoints: ChartPoint[], rect: PlotRect) {
   const { min, max } = resultBounds(allPoints);
   const lastTick = TICK_COUNT - 1;
   return Array.from({ length: TICK_COUNT }, (_unused, index) => {
     const value = min + ((max - min) * index) / lastTick;
-    const y = PLOT_TOP + ((max - value) / (max - min || 1)) * PLOT_HEIGHT;
+    const y = rect.top + ((max - value) / (max - min || 1)) * rect.height;
     return { value, y };
   });
 }
@@ -144,8 +160,9 @@ export function RecordChart({ singles, averages }: RecordChartProps) {
   const allPoints = [...singles, ...averages];
   if (allPoints.length === EMPTY_COUNT) return null;
 
-  const scale = buildScale(allPoints);
-  const ticks = yAxisTicks(allPoints);
+  const rect = plotRect(VIEWBOX_WIDTH, VIEWBOX_HEIGHT);
+  const scale = buildScale(allPoints, rect);
+  const ticks = yAxisTicks(allPoints, rect);
   const landscapeCap = isLandscape
     ? { maxWidth: windowHeight * LANDSCAPE_CHART_HEIGHT_FRACTION * CHART_ASPECT_RATIO }
     : null;
@@ -158,16 +175,16 @@ export function RecordChart({ singles, averages }: RecordChartProps) {
         {ticks.map((tick, index) => (
           <Fragment key={tick.value}>
             <Line
-              x1={PLOT_LEFT}
+              x1={rect.left}
               y1={tick.y}
-              x2={PLOT_RIGHT}
+              x2={rect.right}
               y2={tick.y}
               stroke={colors.border}
               strokeWidth={GRIDLINE_WIDTH}
             />
             <SvgText
               testID={Y_TICK_TEST_ID}
-              x={PLOT_LEFT - TICK_LABEL_GAP}
+              x={rect.left - TICK_LABEL_GAP}
               y={tick.y}
               fontSize={TICK_LABEL_FONT_SIZE}
               fill={colors.muted}
