@@ -5,7 +5,16 @@
  * (with retry), empty (no records of either kind yet), and the loaded chart +
  * tables. Dumb by design: all fetching/computation lives in the calling hook.
  */
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 
 import { formatTime } from '@/domain/services/formatting';
 import { toRecordSeries } from '@/domain/services/chart';
@@ -37,6 +46,11 @@ export function EventProgression({
   error,
   onRetry,
 }: EventProgressionProps) {
+  // Landscape has room to set the Single and Average tables side by side rather
+  // than stacked, matching how the chart and picker use the wider screen.
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+
   if (loading) {
     return (
       <ActivityIndicator
@@ -62,8 +76,18 @@ export function EventProgression({
   return (
     <ScrollView contentContainerStyle={styles.tables}>
       <RecordChart singles={toRecordSeries(singles)} averages={toRecordSeries(averages)} />
-      <RecordTable heading={SINGLE_TABLE_HEADING} points={singles} />
-      <RecordTable heading={AVERAGE_TABLE_HEADING} points={averages} />
+      <View style={isLandscape ? styles.tablesRow : undefined}>
+        <RecordTable
+          heading={SINGLE_TABLE_HEADING}
+          points={singles}
+          style={isLandscape && styles.tableColumn}
+        />
+        <RecordTable
+          heading={AVERAGE_TABLE_HEADING}
+          points={averages}
+          style={isLandscape && styles.tableColumn}
+        />
+      </View>
     </ScrollView>
   );
 }
@@ -71,14 +95,16 @@ export function EventProgression({
 interface RecordTableProps {
   heading: string;
   points: RecordPoint[];
+  /** Extra style for the table's container, e.g. flex sizing when side by side. */
+  style?: StyleProp<ViewStyle>;
 }
 
 // A labelled progression table. Renders nothing when empty so a competitor with
 // only single records (e.g. a format without an average) shows just that table.
-function RecordTable({ heading, points }: RecordTableProps) {
+function RecordTable({ heading, points, style }: RecordTableProps) {
   if (points.length === EMPTY_COUNT) return null;
   return (
-    <View style={styles.section}>
+    <View style={[styles.section, style]}>
       <Text style={styles.sectionHeading}>{heading}</Text>
       {points.map((point) => (
         <View key={point.date} style={styles.row}>
@@ -102,6 +128,8 @@ const styles = StyleSheet.create({
   },
   buttonLabel: { color: '#ffffff', fontWeight: '600' },
   tables: { paddingBottom: 24 },
+  tablesRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 16 },
+  tableColumn: { flex: 1 },
   section: { marginTop: 8 },
   sectionHeading: {
     fontSize: 13,
