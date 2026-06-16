@@ -30,6 +30,9 @@ const RETRY_BUTTON_LABEL = 'Try again';
 const SINGLE_TABLE_HEADING = 'Single';
 const AVERAGE_TABLE_HEADING = 'Average';
 const EMPTY_COUNT = 0;
+// Gap between the two tables when side by side in landscape.
+const COLUMN_GAP = 16;
+const COLUMN_COUNT = 2;
 
 interface EventProgressionProps {
   singles: RecordPoint[];
@@ -47,9 +50,12 @@ export function EventProgression({
   onRetry,
 }: EventProgressionProps) {
   // Landscape has room to set the Single and Average tables side by side rather
-  // than stacked, matching how the chart and picker use the wider screen.
+  // than stacked, matching how the chart and picker use the wider screen. Each
+  // table gets an explicit half-screen width (a percentage won't resolve inside
+  // the ScrollView), so the two columns are always equal.
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
+  const tableColumnWidth = (width - COLUMN_GAP) / COLUMN_COUNT;
 
   if (loading) {
     return (
@@ -80,12 +86,12 @@ export function EventProgression({
         <RecordTable
           heading={SINGLE_TABLE_HEADING}
           points={singles}
-          style={isLandscape && styles.tableColumn}
+          style={isLandscape && { width: tableColumnWidth }}
         />
         <RecordTable
           heading={AVERAGE_TABLE_HEADING}
           points={averages}
-          style={isLandscape && styles.tableColumn}
+          style={isLandscape && { width: tableColumnWidth }}
         />
       </View>
     </ScrollView>
@@ -128,8 +134,7 @@ const styles = StyleSheet.create({
   },
   buttonLabel: { color: '#ffffff', fontWeight: '600' },
   tables: { paddingBottom: 24 },
-  tablesRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 16 },
-  tableColumn: { flex: 1 },
+  tablesRow: { flexDirection: 'row', alignItems: 'flex-start', gap: COLUMN_GAP },
   section: { marginTop: 8 },
   sectionHeading: {
     fontSize: 13,
