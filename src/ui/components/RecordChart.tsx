@@ -11,7 +11,7 @@
  * progression — a running minimum — descends and reads as improvement.
  */
 import { Fragment } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 
 import { dateBounds, resultBounds, formatAxisTick } from '@/domain/services/chart';
@@ -35,6 +35,10 @@ const VIEWBOX_HEIGHT = 200;
 // width and derives its height from this, so the SVG fills edge-to-edge without
 // letterboxing (the aspect ratios match, so the uniform scale leaves no gutters).
 const CHART_ASPECT_RATIO = VIEWBOX_WIDTH / VIEWBOX_HEIGHT;
+// In landscape the full screen width would make the aspect-locked chart taller
+// than the viewport, so cap its height to a fraction of the window and derive
+// the matching max width — keeping the ratio (no letterboxing) and centring it.
+const LANDSCAPE_CHART_HEIGHT_FRACTION = 0.5;
 const PADDING = 12;
 const AXIS_GUTTER_WIDTH = 40; // left strip reserved for the y-axis time labels
 const PLOT_LEFT = AXIS_GUTTER_WIDTH;
@@ -134,16 +138,22 @@ function LegendEntry({ colour, label }: { colour: string; label: string }) {
 }
 
 export function RecordChart({ singles, averages }: RecordChartProps) {
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isLandscape = windowWidth > windowHeight;
+
   const allPoints = [...singles, ...averages];
   if (allPoints.length === EMPTY_COUNT) return null;
 
   const scale = buildScale(allPoints);
   const ticks = yAxisTicks(allPoints);
+  const landscapeCap = isLandscape
+    ? { maxWidth: windowHeight * LANDSCAPE_CHART_HEIGHT_FRACTION * CHART_ASPECT_RATIO }
+    : null;
 
   return (
     <View style={styles.container}>
       <ChartLegend showAverage={averages.length > EMPTY_COUNT} />
-      <View style={styles.chartArea}>
+      <View style={[styles.chartArea, landscapeCap]}>
         <Svg width="100%" height="100%" viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}>
         {ticks.map((tick, index) => (
           <Fragment key={tick.value}>
@@ -193,7 +203,7 @@ export function RecordChart({ singles, averages }: RecordChartProps) {
 
 const styles = StyleSheet.create({
   container: { paddingHorizontal: 16, paddingVertical: 12 },
-  chartArea: { width: '100%', aspectRatio: CHART_ASPECT_RATIO },
+  chartArea: { width: '100%', aspectRatio: CHART_ASPECT_RATIO, alignSelf: 'center' },
   legend: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginBottom: 4 },
   legendEntry: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendSwatch: { width: 12, height: 12, borderRadius: 2 },
