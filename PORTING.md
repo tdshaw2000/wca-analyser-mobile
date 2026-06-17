@@ -22,7 +22,7 @@ See `CLAUDE.md` for the porting rules (test-first, vertical slices, the module m
 | `records.py`       | `domain/services/records.ts`                    | ported        | pre-tracking |
 | `formatting.py`    | `domain/services/formatting.ts`                 | ported        | pre-tracking |
 | `events.py`        | `domain/services/events.ts` + `models/namedEvent.ts` | ported   | `7371c58`    |
-| `chart.py`         | `domain/services/chart.ts` (UI renders natively) | partial      | `8529b4a`    |
+| `chart.py`         | `domain/services/chart.ts` (UI renders natively) | partial (timed only; rest parked) | `8529b4a` |
 | `web.py` (routes)  | `app/` routes + `ui/screens/`                   | partial       | pre-tracking |
 
 _Mobile screens so far: PersonSearch and Competitor. The Competitor screen shows
@@ -43,7 +43,10 @@ _`chart.py` is **partial**: `toRecordSeries` is ported for timed events only.
 The Multi-Blind (`333mbf`, plotted by points) and Fewest-Moves (`333fm`, averages
 scaled to moves) branches, plus `to_consistency_series`, are not yet ported — they
 depend on `format_single`/`format_average`/`decode_multi_blind`, which formatting.ts
-also still lacks (only `format_time` is ported, despite the row above)._
+also still lacks (only `format_time` is ported, despite the row above). **These are
+PARKED — deferred by decision (2026-06-17); see the Backlog note.** For timed events
+the chart is feature-complete (single + average overlay, with per-series legend
+toggle)._
 
 _The chart **rendering** logic from `static/records-chart.js` (no pytest — the JS
 is the spec) is ported: `resultBounds`/`dateBounds`/`formatAxisTick` in chart.ts,
@@ -53,11 +56,15 @@ and the consistency chart (`consistency-chart.js`)._
 
 ## Backlog (Python features not yet ported)
 
-- **Chart — remaining `chart.py` cases:** `toRecordSeries` for Multi-Blind and
-  Fewest-Moves, and `to_consistency_series`. These need `format_single`,
-  `format_average`, `format_consistency`, and `decode_multi_blind` ported into
-  formatting.ts first (each test-first), then the chart cases, then the native
-  component handles the new event units. `RecordChart` already renders timed events.
+- **Chart — remaining `chart.py` cases (PARKED — deferred by decision 2026-06-17):**
+  `toRecordSeries` for Multi-Blind and Fewest-Moves, and `to_consistency_series`.
+  These need `format_single`, `format_average`, `format_consistency`, and
+  `decode_multi_blind` ported into formatting.ts first (each test-first), then the
+  chart cases, then the native component handles the new event units. **Not being
+  ported for now:** the sole user does not compete in these events, so the effort
+  isn't worth it. Timed events are fully handled. Revisit only if a real need
+  arises (the user starts doing these events, or the app gains other users).
+  `RecordChart` already renders timed events.
 
 ## Workflow for any slice (new feature OR drift fix)
 
