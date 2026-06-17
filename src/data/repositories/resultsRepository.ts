@@ -16,6 +16,7 @@ function toResult(dto: WcaResultDto): Result {
   return {
     single: dto.best,
     average: dto.average,
+    solves: dto.attempts,
     competitionId: dto.competition_id,
   };
 }

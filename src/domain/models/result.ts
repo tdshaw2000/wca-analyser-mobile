@@ -12,6 +12,12 @@ export interface Result {
   single: number;
   /** Best average, in centiseconds. Non-positive / 0 means none recorded. */
   average: number;
+  /**
+   * The round's individual attempts (centiseconds), best included. Non-positive
+   * entries are DNF/DNS or unused slots. Optional, mirroring the Python
+   * dataclass's empty-tuple default; the results repository always populates it.
+   */
+  solves?: number[];
   /** The competition this result was set at, e.g. "RubiksUKChampionship2024". */
   competitionId: string;
 }

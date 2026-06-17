@@ -34,11 +34,12 @@ export interface WcaPersonProfileDto {
 /**
  * One element of the /persons/{wca_id}/results response. The real element also
  * carries event_id, round_type_id, etc.; we only consume the single (best),
- * average and competition.
+ * average, individual attempts and competition.
  */
 export interface WcaResultDto {
   best: number;
   average: number;
+  attempts: number[];
   competition_id: string;
 }
 
