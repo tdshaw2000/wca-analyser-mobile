@@ -1,4 +1,5 @@
 import {
+  allSolvesOverTime,
   averageRecordProgression,
   averageResultsOverTime,
   personalRecordFlags,
@@ -154,5 +155,45 @@ describe('averageResultsOverTime', () => {
       { date: EARLIEST_DATE, value: EARLIEST_AVERAGE },
       { date: MIDDLE_DATE, value: LATEST_AVERAGE },
     ]);
+  });
+});
+
+describe('allSolvesOverTime', () => {
+  it('keeps every individual solve chronologically, in within-round order', () => {
+    const earliestSolves = [EARLIEST_SINGLE, 2100, DID_NOT_FINISH, 1950, 2050];
+    const latestSolves = [LATEST_SINGLE, 1600, 1700];
+    const results: Result[] = [
+      { single: LATEST_SINGLE, average: 0, solves: latestSolves, competitionId: LATEST_COMPETITION_ID },
+      { single: EARLIEST_SINGLE, average: 0, solves: earliestSolves, competitionId: EARLIEST_COMPETITION_ID },
+    ];
+
+    const points = allSolvesOverTime(results, COMPETITION_DATES);
+
+    // Earliest round first, its solves in order with the DNF dropped, then latest.
+    expect(points).toEqual([
+      { date: EARLIEST_DATE, value: EARLIEST_SINGLE },
+      { date: EARLIEST_DATE, value: 2100 },
+      { date: EARLIEST_DATE, value: 1950 },
+      { date: EARLIEST_DATE, value: 2050 },
+      { date: LATEST_DATE, value: LATEST_SINGLE },
+      { date: LATEST_DATE, value: 1600 },
+      { date: LATEST_DATE, value: 1700 },
+    ]);
+  });
+
+  it('skips did-not-finish, did-not-start and unused (non-positive) solves', () => {
+    const solvesWithNonResults = [DID_NOT_FINISH, DID_NOT_START, 0, EARLIEST_SINGLE];
+    const results: Result[] = [
+      {
+        single: EARLIEST_SINGLE,
+        average: 0,
+        solves: solvesWithNonResults,
+        competitionId: EARLIEST_COMPETITION_ID,
+      },
+    ];
+
+    const points = allSolvesOverTime(results, COMPETITION_DATES);
+
+    expect(points).toEqual([{ date: EARLIEST_DATE, value: EARLIEST_SINGLE }]);
   });
 });
