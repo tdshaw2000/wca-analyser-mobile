@@ -6,6 +6,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useCompetitorProfile } from '@/hooks/useCompetitorProfile';
 import { usePrProgression } from '@/hooks/usePrProgression';
 import { EVENT_PICKER_TEST_ID } from '@/ui/components/EventPicker';
+import { ALL_RESULTS_TEST_ID } from '@/ui/components/EventProgression';
 import type { Profile } from '@/domain/models/profile';
 import type { RecordPoint } from '@/domain/models/recordPoint';
 
@@ -44,6 +45,11 @@ const PROFILE: Profile = {
 const RECORD_DATE = '2024-11-01';
 const RECORD_TIME = '14.98';
 const SINGLES: RecordPoint[] = [{ date: RECORD_DATE, value: 1498 }];
+const ALL_SINGLES: RecordPoint[] = [
+  { date: RECORD_DATE, value: 1498 },
+  { date: RECORD_DATE, value: 1655 },
+];
+const ALL_AVERAGES: RecordPoint[] = [{ date: RECORD_DATE, value: 1700 }];
 
 const LOADING_TEST_ID = 'competitor-loading';
 const AVATAR_TEST_ID = 'competitor-avatar';
@@ -65,6 +71,8 @@ function mockProgressionState(overrides: Partial<ReturnType<typeof usePrProgress
   usePrProgressionMock.mockReturnValue({
     data: [],
     averages: [],
+    allSingles: [],
+    allAverages: [],
     loading: false,
     error: null,
     reload: jest.fn(),
@@ -124,6 +132,15 @@ describe('CompetitorScreen', () => {
 
     expect(screen.getByText(RECORD_DATE)).toBeTruthy();
     expect(screen.getByText(RECORD_TIME)).toBeTruthy();
+  });
+
+  it('shows the all-results scatter for the selected event', async () => {
+    mockProfileState({ data: PROFILE });
+    mockProgressionState({ data: SINGLES, allSingles: ALL_SINGLES, allAverages: ALL_AVERAGES });
+
+    await render(<CompetitorScreen />);
+
+    expect(screen.getByTestId(ALL_RESULTS_TEST_ID)).toBeTruthy();
   });
 
   it('switches the progression to the event picked from the dropdown', async () => {
