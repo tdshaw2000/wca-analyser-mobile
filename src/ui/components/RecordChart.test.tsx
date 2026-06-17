@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, fireEvent } from '@testing-library/react-native';
 import { processColor } from 'react-native';
 
 import {
@@ -8,6 +8,8 @@ import {
   Y_TICK_TEST_ID,
   SINGLE_COLOUR,
   AVERAGE_COLOUR,
+  SINGLE_LEGEND_TEST_ID,
+  AVERAGE_LEGEND_TEST_ID,
 } from '@/ui/components/RecordChart';
 import type { ChartPoint } from '@/domain/models/chartPoint';
 
@@ -74,5 +76,47 @@ describe('RecordChart', () => {
       expect(Number.isFinite(Number(marker.props.cx))).toBe(true);
       expect(Number.isFinite(Number(marker.props.cy))).toBe(true);
     }
+  });
+
+  it('hides the single series when its legend entry is pressed', async () => {
+    await render(<RecordChart singles={SINGLES} averages={AVERAGES} />);
+
+    await fireEvent.press(screen.getByTestId(SINGLE_LEGEND_TEST_ID));
+
+    expect(screen.queryAllByTestId(SINGLE_POINT_TEST_ID)).toHaveLength(0);
+    // The average series is untouched.
+    expect(screen.getAllByTestId(AVERAGE_POINT_TEST_ID)).toHaveLength(AVERAGES.length);
+  });
+
+  it('shows the single series again when its legend entry is pressed twice', async () => {
+    await render(<RecordChart singles={SINGLES} averages={AVERAGES} />);
+
+    await fireEvent.press(screen.getByTestId(SINGLE_LEGEND_TEST_ID));
+    await fireEvent.press(screen.getByTestId(SINGLE_LEGEND_TEST_ID));
+
+    expect(screen.getAllByTestId(SINGLE_POINT_TEST_ID)).toHaveLength(SINGLES.length);
+  });
+
+  it('toggles the average series independently of the single', async () => {
+    await render(<RecordChart singles={SINGLES} averages={AVERAGES} />);
+
+    await fireEvent.press(screen.getByTestId(AVERAGE_LEGEND_TEST_ID));
+
+    expect(screen.queryAllByTestId(AVERAGE_POINT_TEST_ID)).toHaveLength(0);
+    expect(screen.getAllByTestId(SINGLE_POINT_TEST_ID)).toHaveLength(SINGLES.length);
+  });
+
+  it('keeps the y-axis fixed when a series is hidden', async () => {
+    // Hiding the single series must not rescale the axis, so the still-visible
+    // average markers keep their exact y-coordinates. (Comparing the numeric cy
+    // values, not the SVG tick elements, keeps the assertion off react-native-svg
+    // internals.)
+    await render(<RecordChart singles={SINGLES} averages={AVERAGES} />);
+    const before = screen.getAllByTestId(AVERAGE_POINT_TEST_ID).map((marker) => marker.props.cy);
+
+    await fireEvent.press(screen.getByTestId(SINGLE_LEGEND_TEST_ID));
+
+    const after = screen.getAllByTestId(AVERAGE_POINT_TEST_ID).map((marker) => marker.props.cy);
+    expect(after).toEqual(before);
   });
 });
