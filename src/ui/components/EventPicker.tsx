@@ -1,21 +1,21 @@
 /**
- * A tap-to-open event dropdown. The trigger shows the currently selected event's
- * display name; pressing it opens a modal list of every event the competitor
- * competed in. Picking one reports its raw event id via onSelect and closes.
+ * The event picker. Shows the competitor's competed events in the native OS
+ * picker (an Android dialog), with the current event preselected; choosing one
+ * reports its raw event id via onSelect.
  *
- * Built from React Native primitives (Pressable + Modal) — no picker library —
- * to match the rest of the UI and keep dependencies minimal.
+ * Uses @react-native-picker/picker so the option list is the platform's own
+ * floating dialog — it overlays the screen instead of pushing the chart and
+ * tables down the way an inline dropdown would. The events arrive already named
+ * and ordered by the caller.
  */
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { eventName } from '@/domain/services/events';
 import type { NamedEvent } from '@/domain/models/namedEvent';
 import { colors } from '@/ui/theme/colors';
 
-export const EVENT_PICKER_TRIGGER_TEST_ID = 'event-picker-trigger';
+export const EVENT_PICKER_TEST_ID = 'event-picker';
 
-const DROPDOWN_INDICATOR = '▾';
 const PICKER_LABEL = 'Event';
 
 interface EventPickerProps {
@@ -28,46 +28,21 @@ interface EventPickerProps {
 }
 
 export function EventPicker({ events, selectedEventId, onSelect }: EventPickerProps) {
-  const [open, setOpen] = useState(false);
-
-  function choose(eventId: string) {
-    setOpen(false);
-    onSelect(eventId);
-  }
-
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{PICKER_LABEL}</Text>
-      <Pressable
-        testID={EVENT_PICKER_TRIGGER_TEST_ID}
-        style={styles.trigger}
-        onPress={() => setOpen((wasOpen) => !wasOpen)}
-        accessibilityRole="button"
-      >
-        <Text style={styles.triggerText}>{eventName(selectedEventId)}</Text>
-        <Text style={styles.indicator}>{DROPDOWN_INDICATOR}</Text>
-      </Pressable>
-      {open ? (
-        <ScrollView style={styles.sheet}>
+      <View style={styles.pickerWrapper}>
+        <Picker
+          testID={EVENT_PICKER_TEST_ID}
+          selectedValue={selectedEventId}
+          onValueChange={(eventId) => onSelect(eventId)}
+          style={styles.picker}
+        >
           {events.map((event) => (
-            <Pressable
-              key={event.eventId}
-              style={styles.option}
-              onPress={() => choose(event.eventId)}
-              accessibilityRole="button"
-            >
-              <Text
-                style={[
-                  styles.optionText,
-                  event.eventId === selectedEventId && styles.optionTextSelected,
-                ]}
-              >
-                {event.name}
-              </Text>
-            </Pressable>
+            <Picker.Item key={event.eventId} label={event.name} value={event.eventId} />
           ))}
-        </ScrollView>
-      ) : null}
+        </Picker>
+      </View>
     </View>
   );
 }
@@ -81,33 +56,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  trigger: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  pickerWrapper: {
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
   },
-  triggerText: { fontSize: 17, fontWeight: '600', color: colors.text },
-  indicator: { fontSize: 16, color: colors.muted },
-  sheet: {
-    marginTop: 4,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    maxHeight: 280,
-  },
-  option: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  optionText: { fontSize: 16, color: colors.text },
-  optionTextSelected: { fontWeight: '700', color: colors.primary },
+  picker: { color: colors.text },
 });
