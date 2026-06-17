@@ -1,5 +1,6 @@
 import {
   averageRecordProgression,
+  averageResultsOverTime,
   personalRecordFlags,
   singleRecordProgression,
 } from '@/domain/services/records';
@@ -117,6 +118,41 @@ describe('averageRecordProgression', () => {
     expect(progression).toEqual([
       { date: EARLIEST_DATE, value: EARLIEST_AVERAGE },
       { date: LATEST_DATE, value: LATEST_AVERAGE },
+    ]);
+  });
+});
+
+describe('averageResultsOverTime', () => {
+  it('keeps every attempted average chronologically, including non-records', () => {
+    const results: Result[] = [
+      { single: MIDDLE_SINGLE, average: MIDDLE_AVERAGE, competitionId: MIDDLE_COMPETITION_ID },
+      { single: EARLIEST_SINGLE, average: EARLIEST_AVERAGE, competitionId: EARLIEST_COMPETITION_ID },
+      { single: LATEST_SINGLE, average: LATEST_AVERAGE, competitionId: LATEST_COMPETITION_ID },
+    ];
+
+    const points = averageResultsOverTime(results, COMPETITION_DATES);
+
+    // Unlike the progression, the slower middle average is kept — every attempt shows.
+    expect(points).toEqual([
+      { date: EARLIEST_DATE, value: EARLIEST_AVERAGE },
+      { date: MIDDLE_DATE, value: MIDDLE_AVERAGE },
+      { date: LATEST_DATE, value: LATEST_AVERAGE },
+    ]);
+  });
+
+  it('skips results whose average is a did-not-finish (non-positive)', () => {
+    const results: Result[] = [
+      { single: DID_NOT_FINISH, average: EARLIEST_AVERAGE, competitionId: EARLIEST_COMPETITION_ID },
+      { single: LATEST_SINGLE, average: DID_NOT_FINISH, competitionId: LATEST_COMPETITION_ID },
+      { single: LATEST_SINGLE, average: LATEST_AVERAGE, competitionId: MIDDLE_COMPETITION_ID },
+    ];
+
+    const points = averageResultsOverTime(results, COMPETITION_DATES);
+
+    // The DNF average is dropped; a missing single does not exclude its average.
+    expect(points).toEqual([
+      { date: EARLIEST_DATE, value: EARLIEST_AVERAGE },
+      { date: MIDDLE_DATE, value: LATEST_AVERAGE },
     ]);
   });
 });
