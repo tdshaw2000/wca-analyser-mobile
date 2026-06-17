@@ -5,7 +5,7 @@ import CompetitorScreen from '@/ui/screens/CompetitorScreen';
 import { useLocalSearchParams } from 'expo-router';
 import { useCompetitorProfile } from '@/hooks/useCompetitorProfile';
 import { usePrProgression } from '@/hooks/usePrProgression';
-import { EVENT_PICKER_TRIGGER_TEST_ID } from '@/ui/components/EventPicker';
+import { EVENT_PICKER_TEST_ID } from '@/ui/components/EventPicker';
 import type { Profile } from '@/domain/models/profile';
 import type { RecordPoint } from '@/domain/models/recordPoint';
 
@@ -30,7 +30,6 @@ const NAME = 'Mats Valk';
 const AVATAR_THUMB_URL = 'https://avatars.worldcubeassociation.org/2007VALK01_thumb.jpg';
 const DEFAULT_EVENT_ID = '333';
 const DEFAULT_EVENT_NAME = '3x3x3 Cube';
-const OTHER_EVENT_NAME = 'Pyraminx';
 const OTHER_EVENT_ID = 'pyram';
 const PROFILE: Profile = {
   person: {
@@ -113,7 +112,8 @@ describe('CompetitorScreen', () => {
     await render(<CompetitorScreen />);
 
     expect(usePrProgressionMock).toHaveBeenLastCalledWith(WCA_ID, DEFAULT_EVENT_ID);
-    expect(screen.getByText(DEFAULT_EVENT_NAME)).toBeTruthy();
+    const picker = screen.getByTestId(EVENT_PICKER_TEST_ID);
+    expect(picker.props.items[picker.props.selectedIndex].label).toBe(DEFAULT_EVENT_NAME);
   });
 
   it('shows the progression for the selected event', async () => {
@@ -130,8 +130,7 @@ describe('CompetitorScreen', () => {
     mockProfileState({ data: PROFILE });
 
     await render(<CompetitorScreen />);
-    await fireEvent.press(screen.getByTestId(EVENT_PICKER_TRIGGER_TEST_ID));
-    await fireEvent.press(screen.getByText(OTHER_EVENT_NAME));
+    await fireEvent(screen.getByTestId(EVENT_PICKER_TEST_ID), 'onValueChange', OTHER_EVENT_ID);
 
     expect(usePrProgressionMock).toHaveBeenLastCalledWith(WCA_ID, OTHER_EVENT_ID);
   });
@@ -153,7 +152,7 @@ describe('CompetitorScreen', () => {
     await render(<CompetitorScreen />);
 
     expect(screen.getByText(EMPTY_MESSAGE)).toBeTruthy();
-    expect(screen.queryByTestId(EVENT_PICKER_TRIGGER_TEST_ID)).toBeNull();
+    expect(screen.queryByTestId(EVENT_PICKER_TEST_ID)).toBeNull();
   });
 
   it('shows the error message and retries via reload when the profile fetch fails', async () => {
