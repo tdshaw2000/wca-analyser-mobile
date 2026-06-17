@@ -6,13 +6,20 @@
  * reload } shape plus averages. Empty ids don't hit the API.
  *
  * data is the chronological list of single personal-record points for the event;
- * averages is the matching list for average personal records.
+ * averages is the matching list for average personal records. allSingles and
+ * allAverages carry every solve / every attempted average (not just the records),
+ * feeding the all-results scatter.
  */
 import { useCallback, useEffect, useState } from 'react';
 
 import { getResults } from '@/data/repositories/resultsRepository';
 import { getCompetitionDates } from '@/data/repositories/competitionsRepository';
-import { singleRecordProgression, averageRecordProgression } from '@/domain/services/records';
+import {
+  singleRecordProgression,
+  averageRecordProgression,
+  allSolvesOverTime,
+  averageResultsOverTime,
+} from '@/domain/services/records';
 import type { RecordPoint } from '@/domain/models/recordPoint';
 
 const EMPTY_LENGTH = 0;
@@ -20,6 +27,10 @@ const EMPTY_LENGTH = 0;
 export interface UsePrProgressionResult {
   data: RecordPoint[];
   averages: RecordPoint[];
+  /** Every individual solve over time, for the all-results scatter. */
+  allSingles: RecordPoint[];
+  /** Every attempted average over time, for the all-results scatter. */
+  allAverages: RecordPoint[];
   loading: boolean;
   error: Error | null;
   reload: () => void;
@@ -28,6 +39,8 @@ export interface UsePrProgressionResult {
 export function usePrProgression(wcaId: string, eventId: string): UsePrProgressionResult {
   const [data, setData] = useState<RecordPoint[]>([]);
   const [averages, setAverages] = useState<RecordPoint[]>([]);
+  const [allSingles, setAllSingles] = useState<RecordPoint[]>([]);
+  const [allAverages, setAllAverages] = useState<RecordPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   // Bumping this re-runs the effect even when the ids are unchanged (reload).
@@ -39,6 +52,8 @@ export function usePrProgression(wcaId: string, eventId: string): UsePrProgressi
     if (wcaId.trim().length === EMPTY_LENGTH || eventId.trim().length === EMPTY_LENGTH) {
       setData([]);
       setAverages([]);
+      setAllSingles([]);
+      setAllAverages([]);
       setLoading(false);
       setError(null);
       return;
@@ -55,12 +70,16 @@ export function usePrProgression(wcaId: string, eventId: string): UsePrProgressi
         if (!active) return;
         setData(singleRecordProgression(results, competitionDates));
         setAverages(averageRecordProgression(results, competitionDates));
+        setAllSingles(allSolvesOverTime(results, competitionDates));
+        setAllAverages(averageResultsOverTime(results, competitionDates));
       })
       .catch((caught: unknown) => {
         if (!active) return;
         setError(caught instanceof Error ? caught : new Error(String(caught)));
         setData([]);
         setAverages([]);
+        setAllSingles([]);
+        setAllAverages([]);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -71,5 +90,5 @@ export function usePrProgression(wcaId: string, eventId: string): UsePrProgressi
     };
   }, [wcaId, eventId, reloadCounter]);
 
-  return { data, averages, loading, error, reload };
+  return { data, averages, allSingles, allAverages, loading, error, reload };
 }
