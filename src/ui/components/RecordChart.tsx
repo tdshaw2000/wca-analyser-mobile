@@ -3,7 +3,8 @@
  * overlaying the single and average series on one shared scale. Ported from the
  * Python source's static/records-chart.js (a Chart.js line chart): single in
  * blue, average in green, with the average omitted entirely when an event has no
- * average results.
+ * average results. With connected={false} the joining lines are dropped, giving
+ * a points-only scatter (reused for the "All results" chart).
  *
  * Both series share one time x-axis (positioned by actual date, so the lines
  * align) and one padded result y-axis (resultBounds over both). The y-axis is
@@ -26,6 +27,8 @@ export const SINGLE_COLOUR = '#2563eb';
 export const AVERAGE_COLOUR = '#449964';
 export const SINGLE_POINT_TEST_ID = 'chart-point-single';
 export const AVERAGE_POINT_TEST_ID = 'chart-point-average';
+export const SINGLE_LINE_TEST_ID = 'chart-line-single';
+export const AVERAGE_LINE_TEST_ID = 'chart-line-average';
 export const SINGLE_LEGEND_TEST_ID = 'chart-legend-single';
 export const AVERAGE_LEGEND_TEST_ID = 'chart-legend-average';
 export const Y_TICK_TEST_ID = 'chart-y-tick';
@@ -85,6 +88,12 @@ const FIRST_TICK = 0;
 interface RecordChartProps {
   singles: ChartPoint[];
   averages: ChartPoint[];
+  /**
+   * Whether to join each series' points with a line. True (the default) draws the
+   * record progression; false gives a points-only scatter (the "All results"
+   * chart), matching the web's showLine: false.
+   */
+  connected?: boolean;
 }
 
 interface Scale {
@@ -140,7 +149,7 @@ function yAxisTicks(allPoints: ChartPoint[], rect: PlotRect) {
   });
 }
 
-export function RecordChart({ singles, averages }: RecordChartProps) {
+export function RecordChart({ singles, averages, connected = true }: RecordChartProps) {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const isLandscape = windowWidth > windowHeight;
   // Landscape fills the width and caps the height, so the box is wider than the
@@ -221,16 +230,18 @@ export function RecordChart({ singles, averages }: RecordChartProps) {
             </SvgText>
           </Fragment>
         ))}
-        {singleVisible ? (
+        {connected && singleVisible ? (
           <Polyline
+            testID={SINGLE_LINE_TEST_ID}
             points={polylinePoints(singles, scale)}
             fill="none"
             stroke={SINGLE_COLOUR}
             strokeWidth={LINE_WIDTH}
           />
         ) : null}
-        {hasAverage && averageVisible ? (
+        {connected && hasAverage && averageVisible ? (
           <Polyline
+            testID={AVERAGE_LINE_TEST_ID}
             points={polylinePoints(averages, scale)}
             fill="none"
             stroke={AVERAGE_COLOUR}
