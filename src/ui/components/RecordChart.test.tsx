@@ -5,6 +5,8 @@ import {
   RecordChart,
   SINGLE_POINT_TEST_ID,
   AVERAGE_POINT_TEST_ID,
+  SINGLE_LINE_TEST_ID,
+  AVERAGE_LINE_TEST_ID,
   Y_TICK_TEST_ID,
   SINGLE_COLOUR,
   AVERAGE_COLOUR,
@@ -52,6 +54,23 @@ describe('RecordChart', () => {
 
     expect(screen.getAllByTestId(SINGLE_POINT_TEST_ID)).toHaveLength(SINGLES.length);
     expect(screen.queryAllByTestId(AVERAGE_POINT_TEST_ID)).toHaveLength(0);
+  });
+
+  it('connects each series with a line by default', async () => {
+    await render(<RecordChart singles={SINGLES} averages={AVERAGES} />);
+
+    expect(screen.getAllByTestId(SINGLE_LINE_TEST_ID)).toHaveLength(1);
+    expect(screen.getAllByTestId(AVERAGE_LINE_TEST_ID)).toHaveLength(1);
+  });
+
+  it('omits the connecting lines in points-only (scatter) mode', async () => {
+    await render(<RecordChart singles={SINGLES} averages={AVERAGES} connected={false} />);
+
+    // The markers still plot every point; only the joining lines are gone.
+    expect(screen.queryAllByTestId(SINGLE_LINE_TEST_ID)).toHaveLength(0);
+    expect(screen.queryAllByTestId(AVERAGE_LINE_TEST_ID)).toHaveLength(0);
+    expect(screen.getAllByTestId(SINGLE_POINT_TEST_ID)).toHaveLength(SINGLES.length);
+    expect(screen.getAllByTestId(AVERAGE_POINT_TEST_ID)).toHaveLength(AVERAGES.length);
   });
 
   it('labels the result axis with formatted time ticks', async () => {
