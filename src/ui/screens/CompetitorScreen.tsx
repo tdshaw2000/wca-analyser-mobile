@@ -150,6 +150,8 @@ function ProfileBody({ eventIds, loading, error, onRetryProfile, progression }: 
     <EventProgression
       singles={progression.data}
       averages={progression.averages}
+      allSingles={progression.allSingles}
+      allAverages={progression.allAverages}
       loading={progression.loading}
       error={progression.error}
       onRetry={progression.reload}
