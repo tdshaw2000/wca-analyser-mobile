@@ -125,9 +125,11 @@ function polylinePoints(points: ChartPoint[], scale: Scale): string {
 }
 
 function seriesMarkers(points: ChartPoint[], scale: Scale, testID: string, colour: string) {
-  return points.map((point) => (
+  // The scatter plots every solve, so many points share a date; the index keeps
+  // each marker's key unique (date alone would collide).
+  return points.map((point, index) => (
     <Circle
-      key={point.date}
+      key={`${point.date}-${index}`}
       testID={testID}
       cx={scale.x(point.date)}
       cy={scale.y(point.value)}
