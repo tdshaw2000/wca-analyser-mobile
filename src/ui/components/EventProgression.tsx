@@ -114,7 +114,7 @@ export function EventProgression({
         />
       </View>
       {hasAllResults ? (
-        <View testID={ALL_RESULTS_TEST_ID}>
+        <View testID={ALL_RESULTS_TEST_ID} style={styles.allResults}>
           <Text style={styles.sectionHeading}>{ALL_RESULTS_HEADING}</Text>
           <Text style={styles.subtitle}>{allResultsSubtitle}</Text>
           <RecordChart
@@ -176,6 +176,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   subtitle: { fontSize: 13, color: colors.muted, paddingHorizontal: 16, paddingBottom: 4 },
+  allResults: { marginTop: 16 },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
