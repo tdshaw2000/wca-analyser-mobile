@@ -17,6 +17,8 @@ import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 
 import { dateBounds, resultBounds, formatAxisTick } from '@/domain/services/chart';
 import type { ChartPoint } from '@/domain/models/chartPoint';
+import { ChartLegend } from '@/ui/components/ChartLegend';
+import type { ChartLegendEntry } from '@/ui/components/ChartLegend';
 import { colors } from '@/ui/theme/colors';
 
 // Series colours match the Python chart (records-chart.js).
@@ -136,22 +138,10 @@ function yAxisTicks(allPoints: ChartPoint[], rect: PlotRect) {
   });
 }
 
-function ChartLegend({ showAverage }: { showAverage: boolean }) {
-  return (
-    <View style={styles.legend}>
-      <LegendEntry colour={SINGLE_COLOUR} label={SINGLE_LABEL} />
-      {showAverage ? <LegendEntry colour={AVERAGE_COLOUR} label={AVERAGE_LABEL} /> : null}
-    </View>
-  );
-}
-
-function LegendEntry({ colour, label }: { colour: string; label: string }) {
-  return (
-    <View style={styles.legendEntry}>
-      <View style={[styles.legendSwatch, { backgroundColor: colour }]} />
-      <Text style={styles.legendLabel}>{label}</Text>
-    </View>
-  );
+function legendEntries(showAverage: boolean): ChartLegendEntry[] {
+  const entries: ChartLegendEntry[] = [{ label: SINGLE_LABEL, colour: SINGLE_COLOUR }];
+  if (showAverage) entries.push({ label: AVERAGE_LABEL, colour: AVERAGE_COLOUR });
+  return entries;
 }
 
 export function RecordChart({ singles, averages }: RecordChartProps) {
@@ -184,7 +174,7 @@ export function RecordChart({ singles, averages }: RecordChartProps) {
 
   return (
     <View style={styles.container}>
-      <ChartLegend showAverage={averages.length > EMPTY_COUNT} />
+      <ChartLegend entries={legendEntries(averages.length > EMPTY_COUNT)} />
       <View style={[styles.chartArea, chartAreaSize]} onLayout={measure}>
         <Svg width="100%" height="100%" viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}>
         {ticks.map((tick, index) => (
@@ -237,9 +227,5 @@ const styles = StyleSheet.create({
   container: { paddingHorizontal: 16, paddingVertical: 12 },
   chartArea: { width: '100%' },
   chartAreaPortrait: { aspectRatio: CHART_ASPECT_RATIO },
-  legend: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginBottom: 4 },
-  legendEntry: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendSwatch: { width: 12, height: 12, borderRadius: 2 },
-  legendLabel: { fontSize: 12, color: colors.muted },
   caption: { fontSize: 11, color: colors.muted, textAlign: 'center', marginTop: 2 },
 });
