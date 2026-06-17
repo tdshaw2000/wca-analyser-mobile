@@ -1,11 +1,17 @@
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, fireEvent, within } from '@testing-library/react-native';
 
 import {
   EventProgression,
   PROGRESSION_LOADING_TEST_ID,
   PROGRESSION_EMPTY_MESSAGE,
+  ALL_RESULTS_TEST_ID,
+  ALL_RESULTS_HEADING,
 } from '@/ui/components/EventProgression';
-import { SINGLE_POINT_TEST_ID, AVERAGE_POINT_TEST_ID } from '@/ui/components/RecordChart';
+import {
+  SINGLE_POINT_TEST_ID,
+  AVERAGE_POINT_TEST_ID,
+  SINGLE_LINE_TEST_ID,
+} from '@/ui/components/RecordChart';
 import type { RecordPoint } from '@/domain/models/recordPoint';
 
 // Presentational body for the PR progression: it owns the loading / error /
@@ -86,5 +92,35 @@ describe('EventProgression', () => {
 
     expect(screen.getAllByTestId(SINGLE_POINT_TEST_ID)).toHaveLength(SINGLES.length);
     expect(screen.getAllByTestId(AVERAGE_POINT_TEST_ID)).toHaveLength(AVERAGES.length);
+  });
+
+  // Every solve and every average (not just the records), drawn points-only.
+  const ALL_SINGLES: RecordPoint[] = [
+    { date: FIRST_DATE, value: 1807 },
+    { date: FIRST_DATE, value: 1900 },
+    { date: SECOND_DATE, value: 1498 },
+  ];
+  const ALL_AVERAGES: RecordPoint[] = [{ date: AVG_FIRST_DATE, value: 2050 }];
+
+  it('plots the all-results scatter, points only, below the tables', async () => {
+    await renderProgression({
+      singles: SINGLES,
+      averages: AVERAGES,
+      allSingles: ALL_SINGLES,
+      allAverages: ALL_AVERAGES,
+    });
+
+    const scatter = within(screen.getByTestId(ALL_RESULTS_TEST_ID));
+    expect(scatter.getAllByTestId(SINGLE_POINT_TEST_ID)).toHaveLength(ALL_SINGLES.length);
+    expect(scatter.getAllByTestId(AVERAGE_POINT_TEST_ID)).toHaveLength(ALL_AVERAGES.length);
+    // Scatter, not progression: the points are not joined by a line.
+    expect(scatter.queryAllByTestId(SINGLE_LINE_TEST_ID)).toHaveLength(0);
+    expect(screen.getByText(ALL_RESULTS_HEADING)).toBeTruthy();
+  });
+
+  it('omits the all-results scatter when there are no results to plot', async () => {
+    await renderProgression({ singles: SINGLES, averages: AVERAGES });
+
+    expect(screen.queryByTestId(ALL_RESULTS_TEST_ID)).toBeNull();
   });
 });
