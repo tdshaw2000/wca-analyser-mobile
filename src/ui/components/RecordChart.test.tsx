@@ -73,6 +73,31 @@ describe('RecordChart', () => {
     expect(screen.getAllByTestId(AVERAGE_POINT_TEST_ID)).toHaveLength(AVERAGES.length);
   });
 
+  it('gives every marker a unique key when several solves share a date', async () => {
+    // The all-results scatter plots every solve, so many points land on one
+    // competition date — markers keyed by date alone would collide.
+    const sameDate = '2024-01-01';
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    await render(
+      <RecordChart
+        singles={[
+          { date: sameDate, value: 1807, display: '18.07' },
+          { date: sameDate, value: 1900, display: '19.00' },
+          { date: sameDate, value: 2000, display: '20.00' },
+        ]}
+        averages={[]}
+        connected={false}
+      />,
+    );
+
+    const duplicateKeyWarning = errorSpy.mock.calls.find((call) =>
+      String(call[0]).includes('same key'),
+    );
+    errorSpy.mockRestore();
+    expect(duplicateKeyWarning).toBeUndefined();
+  });
+
   it('labels the result axis with formatted time ticks', async () => {
     await render(<RecordChart singles={SINGLES} averages={AVERAGES} />);
 
