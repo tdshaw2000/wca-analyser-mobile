@@ -47,6 +47,27 @@ export function averageRecordProgression(
 }
 
 /**
+ * Return every individual solve, with its date, in chronological order. Each
+ * result contributes all of its attempts (not just the round's best), keeping
+ * their within-round order; non-positive solves (DNF/DNS, or unused slots) are
+ * skipped. A result missing its solves contributes none.
+ */
+export function allSolvesOverTime(
+  results: Result[],
+  competitionDates: Record<string, string>,
+): RecordPoint[] {
+  const datedResults = [...results].sort((first, second) =>
+    competitionDates[first.competitionId].localeCompare(competitionDates[second.competitionId]),
+  );
+  return datedResults.flatMap((result) => {
+    const date = competitionDates[result.competitionId];
+    return (result.solves ?? [])
+      .filter((solve) => solve > NON_RESULT_THRESHOLD)
+      .map((solve) => ({ date, value: solve }));
+  });
+}
+
+/**
  * Return every attempted average, with its date, in chronological order. Unlike
  * the average progression this keeps every attempt, not only the record-setters;
  * non-positive averages (DNF/DNS, or formats without an average) are skipped.
