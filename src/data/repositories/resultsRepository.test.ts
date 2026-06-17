@@ -15,13 +15,17 @@ const FIRST_SINGLE = 1807;
 const SECOND_SINGLE = 1498;
 const FIRST_AVERAGE = 2177;
 const SECOND_AVERAGE = 1646;
+// Each result's individual attempts (the round's solves), best included.
+const FIRST_ATTEMPTS = [FIRST_SINGLE, 2100, 1950, 2200, 2050];
+const SECOND_ATTEMPTS = [SECOND_SINGLE, 1600, 1700, 1550, 1650];
 
 // The API returns more fields per result (event_id, round_type_id, …); we only
-// consume the single (best), average and competition.
+// consume the single (best), average, individual attempts and competition.
 const RESULTS_RESPONSE = [
   {
     best: FIRST_SINGLE,
     average: FIRST_AVERAGE,
+    attempts: FIRST_ATTEMPTS,
     event_id: EVENT_ID,
     competition_id: FIRST_COMPETITION_ID,
     round_type_id: 'd',
@@ -29,6 +33,7 @@ const RESULTS_RESPONSE = [
   {
     best: SECOND_SINGLE,
     average: SECOND_AVERAGE,
+    attempts: SECOND_ATTEMPTS,
     event_id: EVENT_ID,
     competition_id: SECOND_COMPETITION_ID,
     round_type_id: 'f',
@@ -40,14 +45,24 @@ beforeEach(() => {
 });
 
 describe('getResults', () => {
-  it('maps each result to its single, average and competition', async () => {
+  it('maps each result to its single, average, solves and competition', async () => {
     wcaGetMock.mockResolvedValue(RESULTS_RESPONSE);
 
     const results = await getResults(WCA_ID, EVENT_ID);
 
     expect(results).toEqual([
-      { single: FIRST_SINGLE, average: FIRST_AVERAGE, competitionId: FIRST_COMPETITION_ID },
-      { single: SECOND_SINGLE, average: SECOND_AVERAGE, competitionId: SECOND_COMPETITION_ID },
+      {
+        single: FIRST_SINGLE,
+        average: FIRST_AVERAGE,
+        solves: FIRST_ATTEMPTS,
+        competitionId: FIRST_COMPETITION_ID,
+      },
+      {
+        single: SECOND_SINGLE,
+        average: SECOND_AVERAGE,
+        solves: SECOND_ATTEMPTS,
+        competitionId: SECOND_COMPETITION_ID,
+      },
     ]);
   });
 
