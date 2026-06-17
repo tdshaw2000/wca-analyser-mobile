@@ -15,6 +15,8 @@ import type { RecordPoint } from '@/domain/models/recordPoint';
 /** Selects the metric (single or average) a progression is computed over. */
 type Metric = (result: Result) => number;
 
+const NON_RESULT_THRESHOLD = 0;
+
 /** Flag each value that beats every preceding value, in the order given. */
 export function personalRecordFlags(values: number[]): boolean[] {
   const flags: boolean[] = [];
@@ -42,6 +44,33 @@ export function averageRecordProgression(
   competitionDates: Record<string, string>,
 ): RecordPoint[] {
   return recordProgression(results, competitionDates, (result) => result.average);
+}
+
+/**
+ * Return every attempted average, with its date, in chronological order. Unlike
+ * the average progression this keeps every attempt, not only the record-setters;
+ * non-positive averages (DNF/DNS, or formats without an average) are skipped.
+ */
+export function averageResultsOverTime(
+  results: Result[],
+  competitionDates: Record<string, string>,
+): RecordPoint[] {
+  return resultsOverTime(results, competitionDates, (result) => result.average);
+}
+
+// Shared by the over-time series: a metric's attempted values, with dates, in
+// chronological order, dropping the non-positive (non-result) ones.
+function resultsOverTime(
+  results: Result[],
+  competitionDates: Record<string, string>,
+  metric: Metric,
+): RecordPoint[] {
+  const datedResults = [...results].sort((first, second) =>
+    competitionDates[first.competitionId].localeCompare(competitionDates[second.competitionId]),
+  );
+  return datedResults
+    .filter((result) => metric(result) > NON_RESULT_THRESHOLD)
+    .map((result) => ({ date: competitionDates[result.competitionId], value: metric(result) }));
 }
 
 function recordProgression(
