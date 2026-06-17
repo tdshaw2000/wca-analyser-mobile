@@ -24,11 +24,17 @@ import { colors } from '@/ui/theme/colors';
 
 export const PROGRESSION_LOADING_TEST_ID = 'progression-loading';
 export const PROGRESSION_EMPTY_MESSAGE = 'No personal records yet for this event.';
+export const ALL_RESULTS_TEST_ID = 'all-results-scatter';
+export const ALL_RESULTS_HEADING = 'All results';
 
 const GENERIC_ERROR_MESSAGE = 'Something went wrong. Please try again.';
 const RETRY_BUTTON_LABEL = 'Try again';
 const SINGLE_TABLE_HEADING = 'Single';
 const AVERAGE_TABLE_HEADING = 'Average';
+// Subtitles mirror the web's: with averages both series are shown; otherwise just
+// the singles. (Touch: tap, not click, to hide a series.)
+const ALL_RESULTS_SUBTITLE_WITH_AVERAGE = 'Every single and average. Tap the legend to hide a series.';
+const ALL_RESULTS_SUBTITLE_SINGLE_ONLY = 'Every result over time.';
 const EMPTY_COUNT = 0;
 // Gap between the two tables when side by side in landscape.
 const COLUMN_GAP = 16;
@@ -37,6 +43,10 @@ const COLUMN_COUNT = 2;
 interface EventProgressionProps {
   singles: RecordPoint[];
   averages: RecordPoint[];
+  /** Every solve over time (not just records), for the all-results scatter. */
+  allSingles?: RecordPoint[];
+  /** Every attempted average over time (not just records), for the scatter. */
+  allAverages?: RecordPoint[];
   loading: boolean;
   error: Error | null;
   onRetry: () => void;
@@ -45,6 +55,8 @@ interface EventProgressionProps {
 export function EventProgression({
   singles,
   averages,
+  allSingles = [],
+  allAverages = [],
   loading,
   error,
   onRetry,
@@ -79,6 +91,13 @@ export function EventProgression({
   if (singles.length === EMPTY_COUNT && averages.length === EMPTY_COUNT) {
     return <Text style={[styles.centered, styles.message]}>{PROGRESSION_EMPTY_MESSAGE}</Text>;
   }
+  const hasAllResults =
+    allSingles.length > EMPTY_COUNT || allAverages.length > EMPTY_COUNT;
+  const allResultsSubtitle =
+    allAverages.length > EMPTY_COUNT
+      ? ALL_RESULTS_SUBTITLE_WITH_AVERAGE
+      : ALL_RESULTS_SUBTITLE_SINGLE_ONLY;
+
   return (
     <ScrollView contentContainerStyle={styles.tables}>
       <RecordChart singles={toRecordSeries(singles)} averages={toRecordSeries(averages)} />
@@ -94,6 +113,17 @@ export function EventProgression({
           style={isLandscape && { width: tableColumnWidth }}
         />
       </View>
+      {hasAllResults ? (
+        <View testID={ALL_RESULTS_TEST_ID}>
+          <Text style={styles.sectionHeading}>{ALL_RESULTS_HEADING}</Text>
+          <Text style={styles.subtitle}>{allResultsSubtitle}</Text>
+          <RecordChart
+            singles={toRecordSeries(allSingles)}
+            averages={toRecordSeries(allAverages)}
+            connected={false}
+          />
+        </View>
+      ) : null}
     </ScrollView>
   );
 }
@@ -145,6 +175,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
+  subtitle: { fontSize: 13, color: colors.muted, paddingHorizontal: 16, paddingBottom: 4 },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
