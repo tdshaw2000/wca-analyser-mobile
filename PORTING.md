@@ -18,8 +18,8 @@ See `CLAUDE.md` for the porting rules (test-first, vertical slices, the module m
 
 | Python module      | Mobile target                                   | Status        | Ported from |
 | ------------------ | ----------------------------------------------- | ------------- | ----------- |
-| `wca_client.py`    | `data/api/wcaClient.ts` + `types.ts` + `data/repositories/` | ported    | pre-tracking |
-| `records.py`       | `domain/services/records.ts`                    | ported        | pre-tracking |
+| `wca_client.py`    | `data/api/wcaClient.ts` + `types.ts` + `data/repositories/` | ported    | `a3dfe85` (solves); rest pre-tracking |
+| `records.py`       | `domain/services/records.ts`                    | ported        | `a3dfe85`    |
 | `formatting.py`    | `domain/services/formatting.ts`                 | ported        | pre-tracking |
 | `events.py`        | `domain/services/events.ts` + `models/namedEvent.ts` | ported   | `7371c58`    |
 | `chart.py`         | `domain/services/chart.ts` (UI renders natively) | partial (timed only; rest parked) | `8529b4a` |
@@ -29,7 +29,9 @@ _Mobile screens so far: PersonSearch and Competitor. The Competitor screen shows
 the PR progression for one event at a time via the EventProgression component
 (one combined SVG chart overlaying the single + average progressions — single
 blue, average green, shared time x-axis, time-labelled y-axis — above the two
-tables). Event selection lives on this screen: an on-page EventPicker dropdown
+tables, then an "All results" scatter below them showing every solve and every
+average, points-only via RecordChart's connected={false} mode). Event selection
+lives on this screen: an on-page EventPicker dropdown
 listing the competitor's competed events, defaulting to 3x3x3 (`defaultEventId`).
 It also shows a "View WCA profile" link (the web template's `profile_url` /
 `profile-link`), which hands the URL to the OS via `Linking.openURL` to open the
@@ -50,9 +52,15 @@ toggle)._
 
 _The chart **rendering** logic from `static/records-chart.js` (no pytest — the JS
 is the spec) is ported: `resultBounds`/`dateBounds`/`formatAxisTick` in chart.ts,
-and `RecordChart` (the Chart.js line chart, redrawn as hand-rolled SVG). Not yet
-ported: the moves/points tick branch, the "All results" scatter (`scatter-chart.js`),
-and the consistency chart (`consistency-chart.js`)._
+and `RecordChart` (the Chart.js line chart, redrawn as hand-rolled SVG). The
+"All results" scatter (`scatter-chart.js`) is also ported for timed events: its
+data feeds are `allSolvesOverTime` (every individual solve, needing the new
+per-attempt `Result.solves` threaded through the data layer) and
+`averageResultsOverTime`, both new in records.ts; the rendering reuses
+`RecordChart` in points-only mode. Not yet ported: the moves/points tick branch
+(and `snapAxisBounds` tick-snapping — RecordChart uses evenly-spaced ticks
+instead), the consistency chart (`consistency-chart.js`), and the gap chart
+(`gap-chart.js`)._
 
 ## Backlog (Python features not yet ported)
 
