@@ -17,6 +17,8 @@ import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 
 import { dateBounds, resultBounds, formatAxisTick } from '@/domain/services/chart';
 import type { ChartPoint } from '@/domain/models/chartPoint';
+import { ChartLegend } from '@/ui/components/ChartLegend';
+import type { ChartLegendEntry } from '@/ui/components/ChartLegend';
 import { colors } from '@/ui/theme/colors';
 
 // Series colours match the Python chart (records-chart.js).
@@ -24,6 +26,8 @@ export const SINGLE_COLOUR = '#2563eb';
 export const AVERAGE_COLOUR = '#449964';
 export const SINGLE_POINT_TEST_ID = 'chart-point-single';
 export const AVERAGE_POINT_TEST_ID = 'chart-point-average';
+export const SINGLE_LEGEND_TEST_ID = 'chart-legend-single';
+export const AVERAGE_LEGEND_TEST_ID = 'chart-legend-average';
 export const Y_TICK_TEST_ID = 'chart-y-tick';
 
 const SINGLE_LABEL = 'Single';
@@ -136,24 +140,6 @@ function yAxisTicks(allPoints: ChartPoint[], rect: PlotRect) {
   });
 }
 
-function ChartLegend({ showAverage }: { showAverage: boolean }) {
-  return (
-    <View style={styles.legend}>
-      <LegendEntry colour={SINGLE_COLOUR} label={SINGLE_LABEL} />
-      {showAverage ? <LegendEntry colour={AVERAGE_COLOUR} label={AVERAGE_LABEL} /> : null}
-    </View>
-  );
-}
-
-function LegendEntry({ colour, label }: { colour: string; label: string }) {
-  return (
-    <View style={styles.legendEntry}>
-      <View style={[styles.legendSwatch, { backgroundColor: colour }]} />
-      <Text style={styles.legendLabel}>{label}</Text>
-    </View>
-  );
-}
-
 export function RecordChart({ singles, averages }: RecordChartProps) {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const isLandscape = windowWidth > windowHeight;
@@ -161,9 +147,34 @@ export function RecordChart({ singles, averages }: RecordChartProps) {
   // portrait 1.6 shape. We measure its real pixels and use them as the viewBox
   // so the plot stretches edge-to-edge with no letterboxing.
   const [measured, setMeasured] = useState<{ width: number; height: number } | null>(null);
+  // Each series can be hidden via its legend entry; both start visible.
+  const [singleVisible, setSingleVisible] = useState(true);
+  const [averageVisible, setAverageVisible] = useState(true);
 
+  // The scale and ticks are computed over ALL points regardless of visibility, so
+  // hiding a series never rescales the axes (faithful to the web chart).
   const allPoints = [...singles, ...averages];
   if (allPoints.length === EMPTY_COUNT) return null;
+
+  const hasAverage = averages.length > EMPTY_COUNT;
+  const entries: ChartLegendEntry[] = [
+    {
+      label: SINGLE_LABEL,
+      colour: SINGLE_COLOUR,
+      visible: singleVisible,
+      onToggle: () => setSingleVisible((shown) => !shown),
+      testID: SINGLE_LEGEND_TEST_ID,
+    },
+  ];
+  if (hasAverage) {
+    entries.push({
+      label: AVERAGE_LABEL,
+      colour: AVERAGE_COLOUR,
+      visible: averageVisible,
+      onToggle: () => setAverageVisible((shown) => !shown),
+      testID: AVERAGE_LEGEND_TEST_ID,
+    });
+  }
 
   const useMeasured = isLandscape && measured !== null;
   const viewBoxWidth = useMeasured ? measured.width : VIEWBOX_WIDTH;
@@ -184,7 +195,7 @@ export function RecordChart({ singles, averages }: RecordChartProps) {
 
   return (
     <View style={styles.container}>
-      <ChartLegend showAverage={averages.length > EMPTY_COUNT} />
+      <ChartLegend entries={entries} />
       <View style={[styles.chartArea, chartAreaSize]} onLayout={measure}>
         <Svg width="100%" height="100%" viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}>
         {ticks.map((tick, index) => (
@@ -210,13 +221,15 @@ export function RecordChart({ singles, averages }: RecordChartProps) {
             </SvgText>
           </Fragment>
         ))}
-        <Polyline
-          points={polylinePoints(singles, scale)}
-          fill="none"
-          stroke={SINGLE_COLOUR}
-          strokeWidth={LINE_WIDTH}
-        />
-        {averages.length > EMPTY_COUNT ? (
+        {singleVisible ? (
+          <Polyline
+            points={polylinePoints(singles, scale)}
+            fill="none"
+            stroke={SINGLE_COLOUR}
+            strokeWidth={LINE_WIDTH}
+          />
+        ) : null}
+        {hasAverage && averageVisible ? (
           <Polyline
             points={polylinePoints(averages, scale)}
             fill="none"
@@ -224,8 +237,10 @@ export function RecordChart({ singles, averages }: RecordChartProps) {
             strokeWidth={LINE_WIDTH}
           />
         ) : null}
-        {seriesMarkers(singles, scale, SINGLE_POINT_TEST_ID, SINGLE_COLOUR)}
-        {seriesMarkers(averages, scale, AVERAGE_POINT_TEST_ID, AVERAGE_COLOUR)}
+        {singleVisible ? seriesMarkers(singles, scale, SINGLE_POINT_TEST_ID, SINGLE_COLOUR) : null}
+        {hasAverage && averageVisible
+          ? seriesMarkers(averages, scale, AVERAGE_POINT_TEST_ID, AVERAGE_COLOUR)
+          : null}
         </Svg>
       </View>
       <Text style={styles.caption}>{TIME_AXIS_CAPTION}</Text>
@@ -237,9 +252,5 @@ const styles = StyleSheet.create({
   container: { paddingHorizontal: 16, paddingVertical: 12 },
   chartArea: { width: '100%' },
   chartAreaPortrait: { aspectRatio: CHART_ASPECT_RATIO },
-  legend: { flexDirection: 'row', justifyContent: 'center', gap: 16, marginBottom: 4 },
-  legendEntry: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendSwatch: { width: 12, height: 12, borderRadius: 2 },
-  legendLabel: { fontSize: 12, color: colors.muted },
   caption: { fontSize: 11, color: colors.muted, textAlign: 'center', marginTop: 2 },
 });
