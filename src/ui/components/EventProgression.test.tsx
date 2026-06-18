@@ -11,8 +11,10 @@ import {
   SINGLE_POINT_TEST_ID,
   AVERAGE_POINT_TEST_ID,
   SINGLE_LINE_TEST_ID,
+  BAND_TEST_ID,
 } from '@/ui/components/RecordChart';
 import type { RecordPoint } from '@/domain/models/recordPoint';
+import type { DailySolveRange } from '@/domain/models/dailySolveRange';
 
 // Presentational body for the PR progression: it owns the loading / error /
 // empty / loaded states; the real formatTime runs so rendered times are real.
@@ -122,5 +124,25 @@ describe('EventProgression', () => {
     await renderProgression({ singles: SINGLES, averages: AVERAGES });
 
     expect(screen.queryByTestId(ALL_RESULTS_TEST_ID)).toBeNull();
+  });
+
+  const DAILY_RANGES: DailySolveRange[] = [
+    { date: FIRST_DATE, fastest: 1807, slowest: 1900 },
+    { date: SECOND_DATE, fastest: 1498, slowest: 1498 },
+  ];
+
+  it('shades the daily-range band on the all-results scatter only', async () => {
+    await renderProgression({
+      singles: SINGLES,
+      averages: AVERAGES,
+      allSingles: ALL_SINGLES,
+      allAverages: ALL_AVERAGES,
+      dailyRanges: DAILY_RANGES,
+    });
+
+    // The band belongs to the scatter; the progression chart above has none.
+    const scatter = within(screen.getByTestId(ALL_RESULTS_TEST_ID));
+    expect(scatter.getByTestId(BAND_TEST_ID)).toBeTruthy();
+    expect(screen.getAllByTestId(BAND_TEST_ID)).toHaveLength(1);
   });
 });
