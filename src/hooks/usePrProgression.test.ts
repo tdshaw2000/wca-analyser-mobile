@@ -93,6 +93,12 @@ const EXPECTED_ALL_AVERAGES = [
   { date: MIDDLE_DATE, value: MIDDLE_AVERAGE },
   { date: LATEST_DATE, value: LATEST_AVERAGE },
 ];
+// Each day's fastest/slowest solve, pooled from its round above, in date order.
+const EXPECTED_DAILY_RANGES = [
+  { date: EARLIEST_DATE, fastest: EARLIEST_SINGLE, slowest: 2000 },
+  { date: MIDDLE_DATE, fastest: MIDDLE_SINGLE, slowest: 2300 },
+  { date: LATEST_DATE, fastest: LATEST_SINGLE, slowest: 1600 },
+];
 
 function renderProgression(initialProps = { wcaId: WCA_ID, eventId: EVENT_ID }) {
   // Param is typed so renderHook infers its Props generic (and thus result.current);
@@ -152,6 +158,16 @@ describe('usePrProgression', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.allSingles).toEqual(EXPECTED_ALL_SINGLES);
     expect(result.current.allAverages).toEqual(EXPECTED_ALL_AVERAGES);
+  });
+
+  it('exposes each day’s solve range for the daily-range band', async () => {
+    getResultsMock.mockResolvedValue(RESULTS);
+    getCompetitionDatesMock.mockResolvedValue(COMPETITION_DATES);
+
+    const { result } = await renderProgression();
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.dailyRanges).toEqual(EXPECTED_DAILY_RANGES);
   });
 
   it('reports loading while the fetches are in flight', async () => {
