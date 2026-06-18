@@ -7,8 +7,10 @@ import { useCompetitorProfile } from '@/hooks/useCompetitorProfile';
 import { usePrProgression } from '@/hooks/usePrProgression';
 import { EVENT_PICKER_TEST_ID } from '@/ui/components/EventPicker';
 import { ALL_RESULTS_TEST_ID } from '@/ui/components/EventProgression';
+import { BAND_TEST_ID } from '@/ui/components/RecordChart';
 import type { Profile } from '@/domain/models/profile';
 import type { RecordPoint } from '@/domain/models/recordPoint';
+import type { DailySolveRange } from '@/domain/models/dailySolveRange';
 
 // Event selection now lives on this screen: the profile hook supplies the
 // competitor's events, the screen defaults to 3x3x3, and the progression hook is
@@ -142,6 +144,21 @@ describe('CompetitorScreen', () => {
     await render(<CompetitorScreen />);
 
     expect(screen.getByTestId(ALL_RESULTS_TEST_ID)).toBeTruthy();
+  });
+
+  it('shades the scatter with the daily-range band from the hook', async () => {
+    const DAILY_RANGES: DailySolveRange[] = [{ date: RECORD_DATE, fastest: 1498, slowest: 1655 }];
+    mockProfileState({ data: PROFILE });
+    mockProgressionState({
+      data: SINGLES,
+      allSingles: ALL_SINGLES,
+      allAverages: ALL_AVERAGES,
+      dailyRanges: DAILY_RANGES,
+    });
+
+    await render(<CompetitorScreen />);
+
+    expect(screen.getByTestId(BAND_TEST_ID)).toBeTruthy();
   });
 
   it('switches the progression to the event picked from the dropdown', async () => {
