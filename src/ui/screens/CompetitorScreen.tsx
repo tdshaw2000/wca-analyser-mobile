@@ -152,6 +152,7 @@ function ProfileBody({ eventIds, loading, error, onRetryProfile, progression }: 
       averages={progression.averages}
       allSingles={progression.allSingles}
       allAverages={progression.allAverages}
+      dailyRanges={progression.dailyRanges}
       loading={progression.loading}
       error={progression.error}
       onRetry={progression.reload}
