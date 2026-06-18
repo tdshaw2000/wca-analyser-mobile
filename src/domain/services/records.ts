@@ -11,6 +11,7 @@
  */
 import type { Result } from '@/domain/models/result';
 import type { RecordPoint } from '@/domain/models/recordPoint';
+import type { DailySolveRange } from '@/domain/models/dailySolveRange';
 
 /** Selects the metric (single or average) a progression is computed over. */
 type Metric = (result: Result) => number;
@@ -65,6 +66,37 @@ export function allSolvesOverTime(
       .filter((solve) => solve > NON_RESULT_THRESHOLD)
       .map((solve) => ({ date, value: solve }));
   });
+}
+
+/**
+ * Return each date's fastest-to-slowest finished-solve range, chronologically.
+ * All of a date's solves are pooled across rounds, then reduced to that day's
+ * best and worst; non-positive solves (DNF/DNS, or unused slots) are skipped, so
+ * a date with no finished solves produces no range. Both bounds share the
+ * single's centisecond scale, letting a chart shade the band between them.
+ */
+export function dailySolveRangeOverTime(
+  results: Result[],
+  competitionDates: Record<string, string>,
+): DailySolveRange[] {
+  const solvesByDate = new Map<string, number[]>();
+  for (const result of results) {
+    const date = competitionDates[result.competitionId];
+    for (const solve of result.solves ?? []) {
+      if (solve > NON_RESULT_THRESHOLD) {
+        const solves = solvesByDate.get(date) ?? [];
+        solves.push(solve);
+        solvesByDate.set(date, solves);
+      }
+    }
+  }
+  return Array.from(solvesByDate.entries())
+    .sort(([firstDate], [secondDate]) => firstDate.localeCompare(secondDate))
+    .map(([date, solves]) => ({
+      date,
+      fastest: Math.min(...solves),
+      slowest: Math.max(...solves),
+    }));
 }
 
 /**
