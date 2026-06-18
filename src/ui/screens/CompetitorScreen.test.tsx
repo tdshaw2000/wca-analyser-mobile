@@ -73,6 +73,7 @@ function mockProgressionState(overrides: Partial<ReturnType<typeof usePrProgress
     averages: [],
     allSingles: [],
     allAverages: [],
+    dailyRanges: [],
     loading: false,
     error: null,
     reload: jest.fn(),
