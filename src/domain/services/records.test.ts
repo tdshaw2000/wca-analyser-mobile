@@ -2,6 +2,7 @@ import {
   allSolvesOverTime,
   averageRecordProgression,
   averageResultsOverTime,
+  dailySolveRangeOverTime,
   personalRecordFlags,
   singleRecordProgression,
 } from '@/domain/services/records';
@@ -195,5 +196,44 @@ describe('allSolvesOverTime', () => {
     const points = allSolvesOverTime(results, COMPETITION_DATES);
 
     expect(points).toEqual([{ date: EARLIEST_DATE, value: EARLIEST_SINGLE }]);
+  });
+});
+
+describe('dailySolveRangeOverTime', () => {
+  const EARLIEST_FASTEST = 1750;
+  const EARLIEST_SLOWEST = 2200;
+
+  it('spans the fastest to slowest solve, pooled across a date’s rounds', () => {
+    // Two rounds fall on the earliest date; their solves pool into one range.
+    const firstRoundSolves = [EARLIEST_SINGLE, 2100, 1950];
+    const secondRoundSolves = [EARLIEST_FASTEST, EARLIEST_SLOWEST];
+    const latestSolves = [LATEST_SINGLE, 1600, 1700];
+    const results: Result[] = [
+      { single: LATEST_SINGLE, average: 0, solves: latestSolves, competitionId: LATEST_COMPETITION_ID },
+      { single: EARLIEST_SINGLE, average: 0, solves: firstRoundSolves, competitionId: EARLIEST_COMPETITION_ID },
+      { single: EARLIEST_FASTEST, average: 0, solves: secondRoundSolves, competitionId: EARLIEST_COMPETITION_ID },
+    ];
+
+    const ranges = dailySolveRangeOverTime(results, COMPETITION_DATES);
+
+    expect(ranges).toEqual([
+      { date: EARLIEST_DATE, fastest: EARLIEST_FASTEST, slowest: EARLIEST_SLOWEST },
+      { date: LATEST_DATE, fastest: LATEST_SINGLE, slowest: 1700 },
+    ]);
+  });
+
+  it('skips dates whose solves are all non-results', () => {
+    const finishedAndNonResults = [DID_NOT_FINISH, DID_NOT_START, 0, EARLIEST_SINGLE];
+    const allNonResults = [DID_NOT_FINISH, 0];
+    const results: Result[] = [
+      { single: EARLIEST_SINGLE, average: 0, solves: finishedAndNonResults, competitionId: EARLIEST_COMPETITION_ID },
+      { single: DID_NOT_FINISH, average: 0, solves: allNonResults, competitionId: LATEST_COMPETITION_ID },
+    ];
+
+    const ranges = dailySolveRangeOverTime(results, COMPETITION_DATES);
+
+    expect(ranges).toEqual([
+      { date: EARLIEST_DATE, fastest: EARLIEST_SINGLE, slowest: EARLIEST_SINGLE },
+    ]);
   });
 });
