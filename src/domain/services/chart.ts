@@ -10,6 +10,7 @@
 import { formatTime } from '@/domain/services/formatting';
 import type { ChartPoint } from '@/domain/models/chartPoint';
 import type { RecordPoint } from '@/domain/models/recordPoint';
+import type { DailySolveRange } from '@/domain/models/dailySolveRange';
 
 const CENTISECONDS_PER_SECOND = 100;
 const SECONDS_PER_MINUTE = 60;
@@ -39,6 +40,28 @@ export function toRecordSeries(progression: RecordPoint[]): ChartPoint[] {
     value: record.value,
     display: formatTime(record.value),
   }));
+}
+
+/** The fastest (lower) and slowest (upper) bounds of a shaded daily-range band. */
+export interface DailyRangeSeries {
+  lower: ChartPoint[];
+  upper: ChartPoint[];
+}
+
+/**
+ * Split each day's solve range into the fastest (lower) and slowest (upper)
+ * bound of a band. Both bounds share the single's scale and carry their own
+ * formatted time, so a chart can shade the area between them.
+ */
+export function toDailyRangeSeries(dailyRanges: DailySolveRange[]): DailyRangeSeries {
+  return {
+    lower: dailyRanges.map((range) => boundPoint(range.date, range.fastest)),
+    upper: dailyRanges.map((range) => boundPoint(range.date, range.slowest)),
+  };
+}
+
+function boundPoint(date: string, value: number): ChartPoint {
+  return { date, value, display: formatTime(value) };
 }
 
 /** The padded value range to draw the result axis over, never dropping below zero. */
