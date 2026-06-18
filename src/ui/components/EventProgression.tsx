@@ -17,9 +17,10 @@ import {
 import type { StyleProp, ViewStyle } from 'react-native';
 
 import { formatTime } from '@/domain/services/formatting';
-import { toRecordSeries } from '@/domain/services/chart';
+import { toRecordSeries, toDailyRangeSeries } from '@/domain/services/chart';
 import { RecordChart } from '@/ui/components/RecordChart';
 import type { RecordPoint } from '@/domain/models/recordPoint';
+import type { DailySolveRange } from '@/domain/models/dailySolveRange';
 import { colors } from '@/ui/theme/colors';
 
 export const PROGRESSION_LOADING_TEST_ID = 'progression-loading';
@@ -47,6 +48,8 @@ interface EventProgressionProps {
   allSingles?: RecordPoint[];
   /** Every attempted average over time (not just records), for the scatter. */
   allAverages?: RecordPoint[];
+  /** Each day's fastest/slowest solve, shaded as the scatter's daily-range band. */
+  dailyRanges?: DailySolveRange[];
   loading: boolean;
   error: Error | null;
   onRetry: () => void;
@@ -57,6 +60,7 @@ export function EventProgression({
   averages,
   allSingles = [],
   allAverages = [],
+  dailyRanges = [],
   loading,
   error,
   onRetry,
@@ -120,6 +124,7 @@ export function EventProgression({
           <RecordChart
             singles={toRecordSeries(allSingles)}
             averages={toRecordSeries(allAverages)}
+            band={toDailyRangeSeries(dailyRanges)}
             connected={false}
           />
         </View>
