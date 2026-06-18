@@ -1,6 +1,13 @@
-import { toRecordSeries, resultBounds, dateBounds, formatAxisTick } from '@/domain/services/chart';
+import {
+  toRecordSeries,
+  toDailyRangeSeries,
+  resultBounds,
+  dateBounds,
+  formatAxisTick,
+} from '@/domain/services/chart';
 import type { ChartPoint } from '@/domain/models/chartPoint';
 import type { RecordPoint } from '@/domain/models/recordPoint';
+import type { DailySolveRange } from '@/domain/models/dailySolveRange';
 
 // Ported from the Python source's tests/test_chart.py — the timed-event cases
 // only. Multi-Blind (333mbf) and Fewest-Moves (333fm), which need the eventId
@@ -27,6 +34,34 @@ describe('toRecordSeries', () => {
 
   it('maps an empty progression to an empty series', () => {
     expect(toRecordSeries([])).toEqual([]);
+  });
+});
+
+describe('toDailyRangeSeries', () => {
+  const EARLIEST_SLOWEST = 2100;
+  const LATEST_SLOWEST = 1700;
+  const EARLIEST_SLOWEST_DISPLAY = '21.00';
+  const LATEST_SLOWEST_DISPLAY = '17.00';
+  const RANGES: DailySolveRange[] = [
+    { date: EARLIEST_DATE, fastest: EARLIEST_SINGLE, slowest: EARLIEST_SLOWEST },
+    { date: LATEST_DATE, fastest: LATEST_SINGLE, slowest: LATEST_SLOWEST },
+  ];
+
+  it('splits each day into a fastest (lower) and slowest (upper) bound', () => {
+    expect(toDailyRangeSeries(RANGES)).toEqual({
+      lower: [
+        { date: EARLIEST_DATE, value: EARLIEST_SINGLE, display: EARLIEST_DISPLAY },
+        { date: LATEST_DATE, value: LATEST_SINGLE, display: LATEST_DISPLAY },
+      ],
+      upper: [
+        { date: EARLIEST_DATE, value: EARLIEST_SLOWEST, display: EARLIEST_SLOWEST_DISPLAY },
+        { date: LATEST_DATE, value: LATEST_SLOWEST, display: LATEST_SLOWEST_DISPLAY },
+      ],
+    });
+  });
+
+  it('maps no ranges to empty bounds', () => {
+    expect(toDailyRangeSeries([])).toEqual({ lower: [], upper: [] });
   });
 });
 
