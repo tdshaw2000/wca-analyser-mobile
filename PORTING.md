@@ -19,10 +19,10 @@ See `CLAUDE.md` for the porting rules (test-first, vertical slices, the module m
 | Python module      | Mobile target                                   | Status        | Ported from |
 | ------------------ | ----------------------------------------------- | ------------- | ----------- |
 | `wca_client.py`    | `data/api/wcaClient.ts` + `types.ts` + `data/repositories/` | ported    | `a3dfe85` (solves); rest pre-tracking |
-| `records.py`       | `domain/services/records.ts`                    | ported        | `a3dfe85`    |
+| `records.py`       | `domain/services/records.ts`                    | ported        | `cf230a5` (daily range); `a3dfe85` (solves) |
 | `formatting.py`    | `domain/services/formatting.ts`                 | ported        | pre-tracking |
 | `events.py`        | `domain/services/events.ts` + `models/namedEvent.ts` | ported   | `7371c58`    |
-| `chart.py`         | `domain/services/chart.ts` (UI renders natively) | partial (timed only; rest parked) | `8529b4a` |
+| `chart.py`         | `domain/services/chart.ts` (UI renders natively) | partial (timed only; rest parked) | `b0ff8be` (daily range); `8529b4a` |
 | `web.py` (routes)  | `app/` routes + `ui/screens/`                   | partial       | pre-tracking |
 
 _Mobile screens so far: PersonSearch and Competitor. The Competitor screen shows
@@ -57,7 +57,14 @@ and `RecordChart` (the Chart.js line chart, redrawn as hand-rolled SVG). The
 data feeds are `allSolvesOverTime` (every individual solve, needing the new
 per-attempt `Result.solves` threaded through the data layer) and
 `averageResultsOverTime`, both new in records.ts; the rendering reuses
-`RecordChart` in points-only mode. Not yet ported: the moves/points tick branch
+`RecordChart` in points-only mode. The scatter's **daily-range band**
+(`scatter-chart.js` `06b27c4`) is ported for timed events: `dailySolveRangeOverTime`
+(records.py `daily_solve_range_over_time`) pools each day's solves into a
+fastest/slowest range and `toDailyRangeSeries` (chart.py `to_daily_range_series`)
+splits it into lower/upper bounds; `RecordChart` shades the area between them as a
+filled SVG `Polygon` in translucent Single-blue, toggled by a "Daily Range" legend
+entry (title-cased on mobile vs the web's "Daily range", by request). The web's
+fill-between-datasets is redrawn as the one polygon. Not yet ported: the moves/points tick branch
 (and `snapAxisBounds` tick-snapping — RecordChart uses evenly-spaced ticks
 instead), the consistency chart (`consistency-chart.js`), and the gap chart
 (`gap-chart.js`)._
