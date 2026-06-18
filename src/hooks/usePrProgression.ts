@@ -19,8 +19,10 @@ import {
   averageRecordProgression,
   allSolvesOverTime,
   averageResultsOverTime,
+  dailySolveRangeOverTime,
 } from '@/domain/services/records';
 import type { RecordPoint } from '@/domain/models/recordPoint';
+import type { DailySolveRange } from '@/domain/models/dailySolveRange';
 
 const EMPTY_LENGTH = 0;
 
@@ -31,6 +33,8 @@ export interface UsePrProgressionResult {
   allSingles: RecordPoint[];
   /** Every attempted average over time, for the all-results scatter. */
   allAverages: RecordPoint[];
+  /** Each day's fastest/slowest solve, for the scatter's daily-range band. */
+  dailyRanges: DailySolveRange[];
   loading: boolean;
   error: Error | null;
   reload: () => void;
@@ -41,6 +45,7 @@ export function usePrProgression(wcaId: string, eventId: string): UsePrProgressi
   const [averages, setAverages] = useState<RecordPoint[]>([]);
   const [allSingles, setAllSingles] = useState<RecordPoint[]>([]);
   const [allAverages, setAllAverages] = useState<RecordPoint[]>([]);
+  const [dailyRanges, setDailyRanges] = useState<DailySolveRange[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   // Bumping this re-runs the effect even when the ids are unchanged (reload).
@@ -54,6 +59,7 @@ export function usePrProgression(wcaId: string, eventId: string): UsePrProgressi
       setAverages([]);
       setAllSingles([]);
       setAllAverages([]);
+      setDailyRanges([]);
       setLoading(false);
       setError(null);
       return;
@@ -72,6 +78,7 @@ export function usePrProgression(wcaId: string, eventId: string): UsePrProgressi
         setAverages(averageRecordProgression(results, competitionDates));
         setAllSingles(allSolvesOverTime(results, competitionDates));
         setAllAverages(averageResultsOverTime(results, competitionDates));
+        setDailyRanges(dailySolveRangeOverTime(results, competitionDates));
       })
       .catch((caught: unknown) => {
         if (!active) return;
@@ -80,6 +87,7 @@ export function usePrProgression(wcaId: string, eventId: string): UsePrProgressi
         setAverages([]);
         setAllSingles([]);
         setAllAverages([]);
+        setDailyRanges([]);
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -90,5 +98,5 @@ export function usePrProgression(wcaId: string, eventId: string): UsePrProgressi
     };
   }, [wcaId, eventId, reloadCounter]);
 
-  return { data, averages, allSingles, allAverages, loading, error, reload };
+  return { data, averages, allSingles, allAverages, dailyRanges, loading, error, reload };
 }
