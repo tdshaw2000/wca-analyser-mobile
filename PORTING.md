@@ -9,10 +9,13 @@ See `CLAUDE.md` for the porting rules (test-first, vertical slices, the module m
 ## Source
 
 - **Python repo:** `/home/tim/apps/wca-records-analyser`
-- **Tracking baseline:** `3a26bcd` (2026-06-13) — the commit from which this
-  watermark discipline starts. Rows marked _pre-tracking_ were ported before this
-  file existed; their exact source revision is unknown, so they must be
-  **re-verified against the current Python source the next time they are touched.**
+- **Tracking baseline:** `355848d` (2026-06-17) — the Python source has been
+  reviewed through this commit; everything in it is either ported (see the row
+  SHAs above) or recorded as not-yet-ported (the chart narrative below + Backlog).
+  The discipline began at `3a26bcd` (2026-06-13); rows marked _pre-tracking_ were
+  ported before this file existed, so their exact source revision is unknown and
+  they must be **re-verified against the current Python source the next time they
+  are touched.**
 
 ## Status
 
