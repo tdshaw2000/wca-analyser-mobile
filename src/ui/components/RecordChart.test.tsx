@@ -10,10 +10,14 @@ import {
   Y_TICK_TEST_ID,
   SINGLE_COLOUR,
   AVERAGE_COLOUR,
+  BAND_FILL_COLOUR,
   SINGLE_LEGEND_TEST_ID,
   AVERAGE_LEGEND_TEST_ID,
+  BAND_TEST_ID,
+  BAND_LEGEND_TEST_ID,
 } from '@/ui/components/RecordChart';
 import type { ChartPoint } from '@/domain/models/chartPoint';
+import type { DailyRangeSeries } from '@/domain/services/chart';
 
 // Singles and averages are set on different dates, so the chart must share one
 // time axis to overlay them. Values are the charted numbers; display is the label.
@@ -26,6 +30,18 @@ const AVERAGES: ChartPoint[] = [
   { date: '2023-12-01', value: 2050, display: '20.50' },
   { date: '2024-09-10', value: 1990, display: '19.90' },
 ];
+// Each day's fastest (lower) and slowest (upper) solve, shaded as a band on the
+// all-results scatter.
+const BAND: DailyRangeSeries = {
+  lower: [
+    { date: '2023-11-18', value: 1807, display: '18.07' },
+    { date: '2024-11-01', value: 1498, display: '14.98' },
+  ],
+  upper: [
+    { date: '2023-11-18', value: 2100, display: '21.00' },
+    { date: '2024-11-01', value: 1700, display: '17.00' },
+  ],
+};
 
 describe('RecordChart', () => {
   it('draws a marker per single point in the single colour', async () => {
@@ -148,6 +164,38 @@ describe('RecordChart', () => {
 
     expect(screen.queryAllByTestId(AVERAGE_POINT_TEST_ID)).toHaveLength(0);
     expect(screen.getAllByTestId(SINGLE_POINT_TEST_ID)).toHaveLength(SINGLES.length);
+  });
+
+  it('shades a daily-range band when band bounds are provided', async () => {
+    await render(<RecordChart singles={SINGLES} averages={AVERAGES} band={BAND} connected={false} />);
+
+    const band = screen.getByTestId(BAND_TEST_ID);
+    expect(band.props.fill.payload).toBe(processColor(BAND_FILL_COLOUR));
+  });
+
+  it('omits the band when no band bounds are provided', async () => {
+    await render(<RecordChart singles={SINGLES} averages={AVERAGES} connected={false} />);
+
+    expect(screen.queryByTestId(BAND_TEST_ID)).toBeNull();
+  });
+
+  it('hides the band when its legend entry is pressed', async () => {
+    await render(<RecordChart singles={SINGLES} averages={AVERAGES} band={BAND} connected={false} />);
+
+    await fireEvent.press(screen.getByTestId(BAND_LEGEND_TEST_ID));
+
+    expect(screen.queryByTestId(BAND_TEST_ID)).toBeNull();
+    // The single markers are untouched.
+    expect(screen.getAllByTestId(SINGLE_POINT_TEST_ID)).toHaveLength(SINGLES.length);
+  });
+
+  it('shows the band again when its legend entry is pressed twice', async () => {
+    await render(<RecordChart singles={SINGLES} averages={AVERAGES} band={BAND} connected={false} />);
+
+    await fireEvent.press(screen.getByTestId(BAND_LEGEND_TEST_ID));
+    await fireEvent.press(screen.getByTestId(BAND_LEGEND_TEST_ID));
+
+    expect(screen.getByTestId(BAND_TEST_ID)).toBeTruthy();
   });
 
   it('keeps the y-axis fixed when a series is hidden', async () => {
