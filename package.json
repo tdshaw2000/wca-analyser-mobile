@@ -39,7 +39,9 @@
   "jest": {
     "preset": "jest-expo",
     "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/src/$1"
+      "^@/(.*)$": "<rootDir>/src/$1",
+      "^expo-modules-core$": "<rootDir>/node_modules/expo/node_modules/expo-modules-core",
+      "^expo-modules-core/(.*)$": "<rootDir>/node_modules/expo/node_modules/expo-modules-core/$1"
     }
   },
   "private": true
