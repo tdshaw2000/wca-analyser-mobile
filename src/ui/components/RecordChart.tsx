@@ -14,9 +14,10 @@
 import { Fragment, useState } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import type { LayoutChangeEvent } from 'react-native';
-import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Line, Polygon, Polyline, Text as SvgText } from 'react-native-svg';
 
 import { dateBounds, resultBounds, formatAxisTick } from '@/domain/services/chart';
+import type { DailyRangeSeries } from '@/domain/services/chart';
 import type { ChartPoint } from '@/domain/models/chartPoint';
 import { ChartLegend } from '@/ui/components/ChartLegend';
 import type { ChartLegendEntry } from '@/ui/components/ChartLegend';
@@ -25,16 +26,23 @@ import { colors } from '@/ui/theme/colors';
 // Series colours match the Python chart (records-chart.js).
 export const SINGLE_COLOUR = '#2563eb';
 export const AVERAGE_COLOUR = '#449964';
+// A translucent wash of the Single colour, so the daily-range band reads as the
+// spread of the singles it envelopes (matches scatter-chart.js's BAND_FILL_COLOUR).
+export const BAND_FILL_COLOUR = 'rgba(37, 99, 235, 0.15)';
 export const SINGLE_POINT_TEST_ID = 'chart-point-single';
 export const AVERAGE_POINT_TEST_ID = 'chart-point-average';
 export const SINGLE_LINE_TEST_ID = 'chart-line-single';
 export const AVERAGE_LINE_TEST_ID = 'chart-line-average';
+export const BAND_TEST_ID = 'chart-band';
 export const SINGLE_LEGEND_TEST_ID = 'chart-legend-single';
 export const AVERAGE_LEGEND_TEST_ID = 'chart-legend-average';
+export const BAND_LEGEND_TEST_ID = 'chart-legend-band';
 export const Y_TICK_TEST_ID = 'chart-y-tick';
 
 const SINGLE_LABEL = 'Single';
 const AVERAGE_LABEL = 'Average';
+// Title-cased on mobile (the web reads "Daily range"); set per the user's request.
+const BAND_LABEL = 'Daily Range';
 const TIME_AXIS_CAPTION = 'Time →';
 
 const VIEWBOX_WIDTH = 320;
@@ -94,6 +102,12 @@ interface RecordChartProps {
    * chart), matching the web's showLine: false.
    */
   connected?: boolean;
+  /**
+   * Optional fastest/slowest-per-day bounds shaded as a translucent band behind
+   * the points (the all-results scatter's "Daily Range"). Omitted on the
+   * progression chart and for events without a band (e.g. Multi-Blind).
+   */
+  band?: DailyRangeSeries;
 }
 
 interface Scale {
@@ -124,6 +138,16 @@ function polylinePoints(points: ChartPoint[], scale: Scale): string {
   return points.map((point) => `${scale.x(point.date)},${scale.y(point.value)}`).join(' ');
 }
 
+// A closed ring tracing the slowest (upper) bound left-to-right, then back along
+// the fastest (lower) bound, so the polygon shades the area between the two.
+function bandPolygonPoints(band: DailyRangeSeries, scale: Scale): string {
+  const upper = band.upper.map((point) => `${scale.x(point.date)},${scale.y(point.value)}`);
+  const lower = [...band.lower]
+    .reverse()
+    .map((point) => `${scale.x(point.date)},${scale.y(point.value)}`);
+  return [...upper, ...lower].join(' ');
+}
+
 function seriesMarkers(points: ChartPoint[], scale: Scale, testID: string, colour: string) {
   // The scatter plots every solve, so many points share a date; the index keeps
   // each marker's key unique (date alone would collide).
@@ -151,7 +175,7 @@ function yAxisTicks(allPoints: ChartPoint[], rect: PlotRect) {
   });
 }
 
-export function RecordChart({ singles, averages, connected = true }: RecordChartProps) {
+export function RecordChart({ singles, averages, connected = true, band }: RecordChartProps) {
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const isLandscape = windowWidth > windowHeight;
   // Landscape fills the width and caps the height, so the box is wider than the
@@ -161,6 +185,7 @@ export function RecordChart({ singles, averages, connected = true }: RecordChart
   // Each series can be hidden via its legend entry; both start visible.
   const [singleVisible, setSingleVisible] = useState(true);
   const [averageVisible, setAverageVisible] = useState(true);
+  const [bandVisible, setBandVisible] = useState(true);
 
   // The scale and ticks are computed over ALL points regardless of visibility, so
   // hiding a series never rescales the axes (faithful to the web chart).
@@ -168,6 +193,7 @@ export function RecordChart({ singles, averages, connected = true }: RecordChart
   if (allPoints.length === EMPTY_COUNT) return null;
 
   const hasAverage = averages.length > EMPTY_COUNT;
+  const hasBand = band !== undefined && band.upper.length > EMPTY_COUNT;
   const entries: ChartLegendEntry[] = [
     {
       label: SINGLE_LABEL,
@@ -184,6 +210,15 @@ export function RecordChart({ singles, averages, connected = true }: RecordChart
       visible: averageVisible,
       onToggle: () => setAverageVisible((shown) => !shown),
       testID: AVERAGE_LEGEND_TEST_ID,
+    });
+  }
+  if (hasBand) {
+    entries.push({
+      label: BAND_LABEL,
+      colour: BAND_FILL_COLOUR,
+      visible: bandVisible,
+      onToggle: () => setBandVisible((shown) => !shown),
+      testID: BAND_LEGEND_TEST_ID,
     });
   }
 
@@ -232,6 +267,14 @@ export function RecordChart({ singles, averages, connected = true }: RecordChart
             </SvgText>
           </Fragment>
         ))}
+        {band && hasBand && bandVisible ? (
+          <Polygon
+            testID={BAND_TEST_ID}
+            points={bandPolygonPoints(band, scale)}
+            fill={BAND_FILL_COLOUR}
+            stroke="none"
+          />
+        ) : null}
         {connected && singleVisible ? (
           <Polyline
             testID={SINGLE_LINE_TEST_ID}
