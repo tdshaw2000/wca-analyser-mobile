@@ -15,7 +15,17 @@ import { Fragment, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import type { LayoutChangeEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Svg, { Circle, Line, Polygon, Polyline, Text as SvgText } from 'react-native-svg';
+import Svg, {
+  Circle,
+  ClipPath,
+  Defs,
+  G,
+  Line,
+  Polygon,
+  Polyline,
+  Rect,
+  Text as SvgText,
+} from 'react-native-svg';
 
 import { dateBounds, windowedValueBounds, formatAxisTick } from '@/domain/services/chart';
 import type { DailyRangeSeries, TimeWindow, ValueBounds } from '@/domain/services/chart';
@@ -41,6 +51,11 @@ export const AVERAGE_LEGEND_TEST_ID = 'chart-legend-average';
 export const BAND_LEGEND_TEST_ID = 'chart-legend-band';
 export const Y_TICK_TEST_ID = 'chart-y-tick';
 export const RESET_ZOOM_TEST_ID = 'chart-reset-zoom';
+export const PLOT_AREA_TEST_ID = 'chart-plot-area';
+export const PLOT_CLIP_TEST_ID = 'chart-plot-clip';
+
+// SVG id the plot-area group references to clip the series to the plot rectangle.
+const PLOT_CLIP_ID = 'record-chart-plot-clip';
 
 const SINGLE_LABEL = 'Single';
 const AVERAGE_LABEL = 'Average';
@@ -312,6 +327,17 @@ export function RecordChart({ singles, averages, connected = true, band }: Recor
       <View style={[styles.chartArea, chartAreaSize]} onLayout={measure}>
         <GestureDetector gesture={gesture}>
         <Svg width="100%" height="100%" viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}>
+        <Defs>
+          <ClipPath id={PLOT_CLIP_ID}>
+            <Rect
+              testID={PLOT_CLIP_TEST_ID}
+              x={rect.left}
+              y={rect.top}
+              width={rect.width}
+              height={rect.height}
+            />
+          </ClipPath>
+        </Defs>
         {ticks.map((tick, index) => (
           <Fragment key={tick.value}>
             <Line
@@ -335,6 +361,7 @@ export function RecordChart({ singles, averages, connected = true, band }: Recor
             </SvgText>
           </Fragment>
         ))}
+        <G testID={PLOT_AREA_TEST_ID} clipPath={`url(#${PLOT_CLIP_ID})`}>
         {band && hasBand && bandVisible ? (
           <Polygon
             testID={BAND_TEST_ID}
@@ -365,6 +392,7 @@ export function RecordChart({ singles, averages, connected = true, band }: Recor
         {hasAverage && averageVisible
           ? seriesMarkers(averages, scale, AVERAGE_POINT_TEST_ID, AVERAGE_COLOUR)
           : null}
+        </G>
         </Svg>
         </GestureDetector>
       </View>
