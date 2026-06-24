@@ -11,13 +11,15 @@
  * labelled with time ticks; the higher (slower) times sit at the top, so a
  * progression — a running minimum — descends and reads as improvement.
  */
-import { Fragment, useState } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Fragment, useMemo, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import type { LayoutChangeEvent } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Svg, { Circle, Line, Polygon, Polyline, Text as SvgText } from 'react-native-svg';
 
 import { dateBounds, windowedValueBounds, formatAxisTick } from '@/domain/services/chart';
 import type { DailyRangeSeries, TimeWindow, ValueBounds } from '@/domain/services/chart';
+import { useChartZoom } from '@/hooks/useChartZoom';
 import type { ChartPoint } from '@/domain/models/chartPoint';
 import { ChartLegend } from '@/ui/components/ChartLegend';
 import type { ChartLegendEntry } from '@/ui/components/ChartLegend';
@@ -38,12 +40,30 @@ export const SINGLE_LEGEND_TEST_ID = 'chart-legend-single';
 export const AVERAGE_LEGEND_TEST_ID = 'chart-legend-average';
 export const BAND_LEGEND_TEST_ID = 'chart-legend-band';
 export const Y_TICK_TEST_ID = 'chart-y-tick';
+export const RESET_ZOOM_TEST_ID = 'chart-reset-zoom';
 
 const SINGLE_LABEL = 'Single';
 const AVERAGE_LABEL = 'Average';
 // Title-cased on mobile (the web reads "Daily range"); set per the user's request.
 const BAND_LABEL = 'Daily Range';
 const TIME_AXIS_CAPTION = 'Time →';
+const RESET_ZOOM_LABEL = 'Reset zoom';
+
+// Gesture bookkeeping. Pinch reports a cumulative scale, so we divide by the
+// previous frame's scale to get a per-frame factor; a fresh pinch starts neutral.
+const PINCH_NEUTRAL_SCALE = 1;
+const NO_TRANSLATION = 0;
+const NO_WIDTH = 0;
+// Pixels a drag must travel horizontally before it claims the gesture, so a
+// vertical drag falls through to the surrounding scroll view instead of panning.
+const HORIZONTAL_PAN_THRESHOLD = 10;
+const FRACTION_FLOOR = 0;
+const FRACTION_CEILING = 1;
+const EMPTY_DATE_BOUNDS = { min: '', max: '' };
+
+function clampFraction(value: number): number {
+  return Math.min(Math.max(value, FRACTION_FLOOR), FRACTION_CEILING);
+}
 
 const VIEWBOX_WIDTH = 320;
 const VIEWBOX_HEIGHT = 200;
@@ -191,6 +211,48 @@ export function RecordChart({ singles, averages, connected = true, band }: Recor
   // The scale and ticks are computed over ALL points regardless of visibility, so
   // hiding a series never rescales the axes (faithful to the web chart).
   const allPoints = [...singles, ...averages];
+  // The whole-career extent feeds the zoom state; a pinch/pan narrows the visible
+  // window within it. Derived before the empty guard so the hooks below always run
+  // in the same order regardless of whether there is data.
+  const fullDates = allPoints.length > EMPTY_COUNT ? dateBounds(allPoints) : EMPTY_DATE_BOUNDS;
+  const zoom = useChartZoom({ min: Date.parse(fullDates.min), max: Date.parse(fullDates.max) });
+
+  // Pinch zooms about the touch point and a horizontal drag pans, both on the time
+  // axis only so a vertical drag still scrolls the screen. Fractions are taken over
+  // the measured pixel width. The gesture feel is a manual Expo Go check; the window
+  // maths it drives is unit-tested in useChartZoom.
+  const { zoomBy, panBy } = zoom;
+  const previousPinchScale = useRef(PINCH_NEUTRAL_SCALE);
+  const previousPanX = useRef(NO_TRANSLATION);
+  const measuredWidth = measured?.width ?? NO_WIDTH;
+  const gesture = useMemo(() => {
+    const pinch = Gesture.Pinch()
+      .runOnJS(true)
+      .onUpdate((event) => {
+        if (measuredWidth === NO_WIDTH) return;
+        const scaleFactor = event.scale / previousPinchScale.current;
+        previousPinchScale.current = event.scale;
+        zoomBy(scaleFactor, clampFraction(event.focalX / measuredWidth));
+      })
+      .onEnd(() => {
+        previousPinchScale.current = PINCH_NEUTRAL_SCALE;
+      });
+    const pan = Gesture.Pan()
+      .runOnJS(true)
+      .activeOffsetX([-HORIZONTAL_PAN_THRESHOLD, HORIZONTAL_PAN_THRESHOLD])
+      .onBegin(() => {
+        previousPanX.current = NO_TRANSLATION;
+      })
+      .onUpdate((event) => {
+        if (measuredWidth === NO_WIDTH) return;
+        const movedPixels = event.translationX - previousPanX.current;
+        previousPanX.current = event.translationX;
+        // Drag left (negative) reveals later dates, so the window moves forward.
+        panBy(-movedPixels / measuredWidth);
+      });
+    return Gesture.Simultaneous(pinch, pan);
+  }, [zoomBy, panBy, measuredWidth]);
+
   if (allPoints.length === EMPTY_COUNT) return null;
 
   const hasAverage = averages.length > EMPTY_COUNT;
@@ -227,13 +289,11 @@ export function RecordChart({ singles, averages, connected = true, band }: Recor
   const viewBoxWidth = useMeasured ? measured.width : VIEWBOX_WIDTH;
   const viewBoxHeight = useMeasured ? measured.height : VIEWBOX_HEIGHT;
   const rect = plotRect(viewBoxWidth, viewBoxHeight);
-  // The whole-career window: the chart spans every record until a gesture zooms
-  // in. Both series and the full window feed the value rescale, so the axes are
-  // computed over all points regardless of which series are hidden.
-  const dates = dateBounds(allPoints);
-  const window: TimeWindow = { start: Date.parse(dates.min), end: Date.parse(dates.max) };
-  const valueBounds = windowedValueBounds([singles, averages], window);
-  const scale = buildScale(window, valueBounds, rect);
+  // Both series and the visible window feed the value rescale, so the axes are
+  // computed over all points regardless of which series are hidden, and refit to
+  // whatever the current zoom window frames.
+  const valueBounds = windowedValueBounds([singles, averages], zoom.window);
+  const scale = buildScale(zoom.window, valueBounds, rect);
   const ticks = yAxisTicks(valueBounds, rect);
   const chartAreaSize = isLandscape
     ? { height: windowHeight * LANDSCAPE_CHART_HEIGHT_FRACTION }
@@ -250,6 +310,7 @@ export function RecordChart({ singles, averages, connected = true, band }: Recor
     <View style={styles.container}>
       <ChartLegend entries={entries} />
       <View style={[styles.chartArea, chartAreaSize]} onLayout={measure}>
+        <GestureDetector gesture={gesture}>
         <Svg width="100%" height="100%" viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}>
         {ticks.map((tick, index) => (
           <Fragment key={tick.value}>
@@ -305,7 +366,13 @@ export function RecordChart({ singles, averages, connected = true, band }: Recor
           ? seriesMarkers(averages, scale, AVERAGE_POINT_TEST_ID, AVERAGE_COLOUR)
           : null}
         </Svg>
+        </GestureDetector>
       </View>
+      {zoom.isZoomed ? (
+        <Pressable testID={RESET_ZOOM_TEST_ID} onPress={zoom.reset} style={styles.resetButton}>
+          <Text style={styles.resetLabel}>{RESET_ZOOM_LABEL}</Text>
+        </Pressable>
+      ) : null}
       <Text style={styles.caption}>{TIME_AXIS_CAPTION}</Text>
     </View>
   );
@@ -316,4 +383,6 @@ const styles = StyleSheet.create({
   chartArea: { width: '100%' },
   chartAreaPortrait: { aspectRatio: CHART_ASPECT_RATIO },
   caption: { fontSize: 11, color: colors.muted, textAlign: 'center', marginTop: 2 },
+  resetButton: { alignSelf: 'center', marginTop: 6, paddingVertical: 4, paddingHorizontal: 12 },
+  resetLabel: { fontSize: 12, color: colors.primary, fontWeight: '600' },
 });
