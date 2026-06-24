@@ -6,6 +6,7 @@ import {
   formatAxisTick,
   pointsFramingWindow,
   zoomWindow,
+  panWindow,
 } from '@/domain/services/chart';
 import type { ChartPoint } from '@/domain/models/chartPoint';
 import type { RecordPoint } from '@/domain/models/recordPoint';
@@ -175,6 +176,35 @@ describe('zoomWindow', () => {
     // span 40d / 0.5 = 80d; centred it would start at day 40, but that ends past
     // day 100, so it shifts left to sit flush against the right edge (days 20..100).
     expect(zoomed).toEqual({ start: 20 * DAY_MS, end: 100 * DAY_MS });
+  });
+});
+
+// Net-new logic (as with zoomWindow). panWindow slides the visible window along
+// the time axis by a fraction of its own span, keeping the span fixed and never
+// sliding past either edge of the data. A positive delta moves forward in time.
+describe('panWindow', () => {
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const FULL_RANGE = { min: 0, max: 100 * DAY_MS };
+
+  it('slides the window forward by a fraction of its span', () => {
+    const panned = panWindow({ start: 20 * DAY_MS, end: 40 * DAY_MS }, FULL_RANGE, 0.5);
+
+    // span 20d, shifted forward by 0.5 * 20d = 10d -> days 30..50.
+    expect(panned).toEqual({ start: 30 * DAY_MS, end: 50 * DAY_MS });
+  });
+
+  it('stops at the right edge rather than sliding past the latest data', () => {
+    const panned = panWindow({ start: 80 * DAY_MS, end: 100 * DAY_MS }, FULL_RANGE, 0.5);
+
+    // already flush against day 100, so a forward pan leaves it put.
+    expect(panned).toEqual({ start: 80 * DAY_MS, end: 100 * DAY_MS });
+  });
+
+  it('stops at the left edge rather than sliding before the earliest data', () => {
+    const panned = panWindow({ start: 0, end: 20 * DAY_MS }, FULL_RANGE, -0.5);
+
+    // already flush against day 0, so a backward pan leaves it put.
+    expect(panned).toEqual({ start: 0, end: 20 * DAY_MS });
   });
 });
 
