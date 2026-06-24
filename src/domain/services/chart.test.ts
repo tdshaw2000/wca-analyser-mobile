@@ -5,6 +5,7 @@ import {
   dateBounds,
   formatAxisTick,
   pointsFramingWindow,
+  zoomWindow,
 } from '@/domain/services/chart';
 import type { ChartPoint } from '@/domain/models/chartPoint';
 import type { RecordPoint } from '@/domain/models/recordPoint';
@@ -136,6 +137,44 @@ describe('pointsFramingWindow', () => {
 
   it('returns an empty array for an empty series', () => {
     expect(pointsFramingWindow([], Date.parse('2024-01-01'), Date.parse('2024-12-31'))).toEqual([]);
+  });
+});
+
+// Net-new logic with no Python/web source: the Chart.js zoom plugin did this
+// internally. zoomWindow turns a pinch scale into a new, clamped time window.
+// scaleFactor > 1 zooms in (narrows the span); the focusFraction (0..1) is the
+// point within the current window that stays put under the pinch.
+describe('zoomWindow', () => {
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const FULL_RANGE = { min: 0, max: 100 * DAY_MS };
+
+  it('zooms in by narrowing the span around the focus point', () => {
+    const zoomed = zoomWindow({ start: 0, end: 100 * DAY_MS }, FULL_RANGE, 2, 0.5);
+
+    // span 100d / 2 = 50d, centred on the midpoint (day 50) -> days 25..75.
+    expect(zoomed).toEqual({ start: 25 * DAY_MS, end: 75 * DAY_MS });
+  });
+
+  it('clamps a zoom-out back to the full data range', () => {
+    const zoomed = zoomWindow({ start: 25 * DAY_MS, end: 75 * DAY_MS }, FULL_RANGE, 0.5, 0.5);
+
+    // span 50d / 0.5 = 100d = the full span, so it can not widen further.
+    expect(zoomed).toEqual({ start: 0, end: 100 * DAY_MS });
+  });
+
+  it('floors the span at one day so it can not zoom in indefinitely', () => {
+    const zoomed = zoomWindow({ start: 0, end: 2 * DAY_MS }, FULL_RANGE, 10, 0);
+
+    // 2d / 10 = 0.2d, floored to 1d; focus 0 keeps the left edge fixed.
+    expect(zoomed).toEqual({ start: 0, end: DAY_MS });
+  });
+
+  it('shifts the window so it never spills past the full range edge', () => {
+    const zoomed = zoomWindow({ start: 60 * DAY_MS, end: 100 * DAY_MS }, FULL_RANGE, 0.5, 0.5);
+
+    // span 40d / 0.5 = 80d; centred it would start at day 40, but that ends past
+    // day 100, so it shifts left to sit flush against the right edge (days 20..100).
+    expect(zoomed).toEqual({ start: 20 * DAY_MS, end: 100 * DAY_MS });
   });
 });
 
