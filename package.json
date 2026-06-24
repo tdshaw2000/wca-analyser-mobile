@@ -38,6 +38,9 @@
   },
   "jest": {
     "preset": "jest-expo",
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.js"
+    ],
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1",
       "^expo-modules-core$": "<rootDir>/node_modules/expo/node_modules/expo-modules-core",
