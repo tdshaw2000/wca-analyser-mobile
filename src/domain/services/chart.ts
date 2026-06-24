@@ -184,6 +184,20 @@ export function pointsFramingWindow(
   return framing;
 }
 
+/**
+ * Refit the value axis to a time window: the result bounds over the points
+ * framing the window across every series, so a zoomed-in period fills the
+ * vertical space rather than being squashed against the full-career scale. Falls
+ * back to the bounds over all points when nothing frames the window. The core of
+ * the web's rescaleResultAxisToWindow.
+ */
+export function windowedValueBounds(series: ChartPoint[][], window: TimeWindow): ValueBounds {
+  const framing = series.flatMap((points) =>
+    pointsFramingWindow(points, window.start, window.end),
+  );
+  return resultBounds(framing.length === 0 ? series.flat() : framing);
+}
+
 /** Render a result-axis tick: whole seconds, as "m:ss" once it reaches a minute. */
 export function formatAxisTick(centiseconds: number): string {
   const totalSeconds = Math.round(centiseconds / CENTISECONDS_PER_SECOND);
