@@ -7,6 +7,7 @@ import {
   pointsFramingWindow,
   zoomWindow,
   panWindow,
+  windowedValueBounds,
 } from '@/domain/services/chart';
 import type { ChartPoint } from '@/domain/models/chartPoint';
 import type { RecordPoint } from '@/domain/models/recordPoint';
@@ -205,6 +206,34 @@ describe('panWindow', () => {
 
     // already flush against day 0, so a backward pan leaves it put.
     expect(panned).toEqual({ start: 0, end: 20 * DAY_MS });
+  });
+});
+
+// The core of the web's rescaleResultAxisToWindow: after a zoom or pan, refit
+// the value axis to whatever is visible — the framing points across every series
+// — so a zoomed-in period fills the vertical space instead of being squashed
+// against the full-career scale.
+describe('windowedValueBounds', () => {
+  const SINGLES = [
+    chartPoint('2024-01-01', 1000),
+    chartPoint('2024-02-01', 2000),
+    chartPoint('2024-03-01', 3000),
+    chartPoint('2024-04-01', 4000),
+  ];
+  const WINDOW = { start: Date.parse('2024-02-15'), end: Date.parse('2024-03-15') };
+
+  it('bounds the axis to the points framing the window, not the whole series', () => {
+    // Frames Mar (3000) inside, plus Feb (2000) and Apr (4000) as brackets:
+    // values 2000..4000, padded 5% (range 2000 -> padding 100) -> 1900..4100.
+    expect(windowedValueBounds([SINGLES], WINDOW)).toEqual({ min: 1900, max: 4100 });
+  });
+
+  it('combines the framing points across every series', () => {
+    const averages = [chartPoint('2024-03-01', 5000)];
+
+    // Singles still frame 2000..4000; the average adds 5000 inside the window, so
+    // the combined range is 2000..5000 (range 3000 -> padding 150) -> 1850..5150.
+    expect(windowedValueBounds([SINGLES, averages], WINDOW)).toEqual({ min: 1850, max: 5150 });
   });
 });
 
