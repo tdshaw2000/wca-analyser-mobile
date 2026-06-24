@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import { render, screen, fireEvent, within } from '@testing-library/react-native';
 import { processColor } from 'react-native';
 
 import {
@@ -9,6 +9,8 @@ import {
   SINGLE_LINE_TEST_ID,
   AVERAGE_LINE_TEST_ID,
   Y_TICK_TEST_ID,
+  PLOT_AREA_TEST_ID,
+  PLOT_CLIP_TEST_ID,
   SINGLE_COLOUR,
   AVERAGE_COLOUR,
   BAND_FILL_COLOUR,
@@ -233,6 +235,38 @@ describe('RecordChart', () => {
       expect(scale.y(VALUE_BOUNDS.max)).toBe(RECT.top);
       expect(scale.y(VALUE_BOUNDS.min)).toBe(RECT.bottom);
     });
+  });
+
+  // When zoomed, the points framing the window sit outside it; their markers and
+  // connecting lines must be clipped to the plot area so they do not spill over the
+  // y-axis gutter and the right padding.
+  it('clips the plotted series to the plot rectangle', async () => {
+    await render(<RecordChart singles={SINGLES} averages={AVERAGES} />);
+
+    const clip = screen.getByTestId(PLOT_CLIP_TEST_ID);
+    // Plot rect of the default 320x200 viewBox: a 40px y-axis gutter, 12px padding.
+    expect(Number(clip.props.x)).toBe(40);
+    expect(Number(clip.props.y)).toBe(12);
+    expect(Number(clip.props.width)).toBe(268);
+    expect(Number(clip.props.height)).toBe(176);
+  });
+
+  it('draws the series markers inside the clipped plot group', async () => {
+    await render(<RecordChart singles={SINGLES} averages={AVERAGES} />);
+
+    const plotArea = screen.getByTestId(PLOT_AREA_TEST_ID);
+    expect(plotArea.props.clipPath).toBeTruthy();
+    // The single markers are descendants of the clipped group, not loose siblings.
+    expect(within(plotArea).getAllByTestId(SINGLE_POINT_TEST_ID)).toHaveLength(SINGLES.length);
+  });
+
+  it('keeps the y-axis ticks outside the clip so the gutter labels stay visible', async () => {
+    await render(<RecordChart singles={SINGLES} averages={AVERAGES} />);
+
+    const plotArea = screen.getByTestId(PLOT_AREA_TEST_ID);
+    // Tick labels sit in the left gutter; clipping them would hide them.
+    expect(within(plotArea).queryAllByTestId(Y_TICK_TEST_ID)).toHaveLength(0);
+    expect(screen.getAllByTestId(Y_TICK_TEST_ID).length).toBeGreaterThan(0);
   });
 
   it('keeps the y-axis fixed when a series is hidden', async () => {
