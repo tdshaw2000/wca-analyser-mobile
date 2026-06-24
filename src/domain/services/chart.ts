@@ -130,6 +130,23 @@ export function zoomWindow(
 }
 
 /**
+ * Slide the visible window along the time axis by a fraction of its own span,
+ * keeping the span fixed. A positive delta moves forward in time. The window is
+ * clamped so it never slides past either edge of the data. Net-new logic, as
+ * with zoomWindow.
+ */
+export function panWindow(
+  window: TimeWindow,
+  fullRange: TimeRange,
+  deltaFraction: number,
+): TimeWindow {
+  const span = window.end - window.start;
+  const shiftedStart = window.start + deltaFraction * span;
+  const start = clamp(shiftedStart, fullRange.min, fullRange.max - span);
+  return { start, end: start + span };
+}
+
+/**
  * The points that frame a time window for one series: those inside it, plus the
  * nearest point on each side. The bracketing points matter because a connecting
  * line can cross the window even when no vertex falls inside it — without them,
