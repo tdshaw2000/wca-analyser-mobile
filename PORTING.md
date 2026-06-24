@@ -67,10 +67,27 @@ fastest/slowest range and `toDailyRangeSeries` (chart.py `to_daily_range_series`
 splits it into lower/upper bounds; `RecordChart` shades the area between them as a
 filled SVG `Polygon` in translucent Single-blue, toggled by a "Daily Range" legend
 entry (title-cased on mobile vs the web's "Daily range", by request). The web's
-fill-between-datasets is redrawn as the one polygon. Not yet ported: the moves/points tick branch
-(and `snapAxisBounds` tick-snapping — RecordChart uses evenly-spaced ticks
-instead), the consistency chart (`consistency-chart.js`), and the gap chart
-(`gap-chart.js`)._
+fill-between-datasets is redrawn as the one polygon._
+
+_The chart's **pinch-zoom and pan** (`records-chart.js` `b8de383`, dated
+2026-06-23 — **ahead of the tracking baseline**, so cherry-ported, not a baseline
+advance) is ported for timed events on both the progression and scatter charts.
+The web uses the Chart.js zoom plugin (zoom/pan constrained to the time x-axis,
+with the result y-axis rescaled to the visible window); hand-rolled SVG has no
+plugin, so it is reimplemented natively. In `chart.ts`: `pointsFramingWindow` and
+`windowedValueBounds` port the core of the web's `rescaleResultAxisToWindow`
+(refit the value axis to the points framing the window, brackets included), while
+`zoomWindow`/`panWindow` are **new** — the window arithmetic the Chart.js plugin
+did internally, so they have no Python source. `buildScale` became a window→pixel
+mapping; the `useChartZoom` hook holds the visible-window state (+ reset); and
+`RecordChart` drives it from a `GestureDetector` — pinch zooms about the touch
+point, a **horizontal** drag pans (vertical drags fall through so the screen still
+scrolls), and a "Reset zoom" control appears once zoomed. The gesture recognition
+itself is a manual Expo Go check (mocked under jest); the window maths is fully
+unit-tested. Not yet ported: the moves/points tick branch (and `snapAxisBounds`
+tick-snapping — RecordChart uses evenly-spaced ticks instead, so the web's
+snap-to-nice-step on the rescaled axis is not reproduced), the consistency chart
+(`consistency-chart.js`), and the gap chart (`gap-chart.js`)._
 
 ## Backlog (Python features not yet ported)
 
