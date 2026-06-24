@@ -16,8 +16,8 @@ import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import type { LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Line, Polygon, Polyline, Text as SvgText } from 'react-native-svg';
 
-import { dateBounds, resultBounds, formatAxisTick } from '@/domain/services/chart';
-import type { DailyRangeSeries } from '@/domain/services/chart';
+import { dateBounds, windowedValueBounds, formatAxisTick } from '@/domain/services/chart';
+import type { DailyRangeSeries, TimeWindow, ValueBounds } from '@/domain/services/chart';
 import type { ChartPoint } from '@/domain/models/chartPoint';
 import { ChartLegend } from '@/ui/components/ChartLegend';
 import type { ChartLegendEntry } from '@/ui/components/ChartLegend';
@@ -115,22 +115,23 @@ interface Scale {
   y: (value: number) => number;
 }
 
-function buildScale(allPoints: ChartPoint[], rect: PlotRect): Scale {
-  const values = resultBounds(allPoints);
-  const dates = dateBounds(allPoints);
-  const earliest = Date.parse(dates.min);
-  const dateSpan = Date.parse(dates.max) - earliest;
-  const valueSpan = values.max - values.min;
+// The pure mapping from a visible time window and value bounds onto plot pixels.
+// x is driven by the window (so a zoom re-spreads the dates) and y by the bounds
+// (so a zoom refits the height); both are precomputed by the caller, keeping this
+// a plain coordinate transform with no knowledge of zoom.
+export function buildScale(window: TimeWindow, valueBounds: ValueBounds, rect: PlotRect): Scale {
+  const dateSpan = window.end - window.start;
+  const valueSpan = valueBounds.max - valueBounds.min;
 
   return {
     x: (date) =>
       dateSpan === ZERO_SPAN
         ? rect.centreX
-        : rect.left + ((Date.parse(date) - earliest) / dateSpan) * rect.width,
+        : rect.left + ((Date.parse(date) - window.start) / dateSpan) * rect.width,
     y: (value) =>
       valueSpan === ZERO_SPAN
         ? rect.centreY
-        : rect.top + ((values.max - value) / valueSpan) * rect.height,
+        : rect.top + ((valueBounds.max - value) / valueSpan) * rect.height,
   };
 }
 
@@ -165,8 +166,8 @@ function seriesMarkers(points: ChartPoint[], scale: Scale, testID: string, colou
 
 // Evenly spaced result-axis ticks between the padded bounds, each a gridline plus
 // a time label down the left gutter.
-function yAxisTicks(allPoints: ChartPoint[], rect: PlotRect) {
-  const { min, max } = resultBounds(allPoints);
+function yAxisTicks(bounds: ValueBounds, rect: PlotRect) {
+  const { min, max } = bounds;
   const lastTick = TICK_COUNT - 1;
   return Array.from({ length: TICK_COUNT }, (_unused, index) => {
     const value = min + ((max - min) * index) / lastTick;
@@ -226,8 +227,14 @@ export function RecordChart({ singles, averages, connected = true, band }: Recor
   const viewBoxWidth = useMeasured ? measured.width : VIEWBOX_WIDTH;
   const viewBoxHeight = useMeasured ? measured.height : VIEWBOX_HEIGHT;
   const rect = plotRect(viewBoxWidth, viewBoxHeight);
-  const scale = buildScale(allPoints, rect);
-  const ticks = yAxisTicks(allPoints, rect);
+  // The whole-career window: the chart spans every record until a gesture zooms
+  // in. Both series and the full window feed the value rescale, so the axes are
+  // computed over all points regardless of which series are hidden.
+  const dates = dateBounds(allPoints);
+  const window: TimeWindow = { start: Date.parse(dates.min), end: Date.parse(dates.max) };
+  const valueBounds = windowedValueBounds([singles, averages], window);
+  const scale = buildScale(window, valueBounds, rect);
+  const ticks = yAxisTicks(valueBounds, rect);
   const chartAreaSize = isLandscape
     ? { height: windowHeight * LANDSCAPE_CHART_HEIGHT_FRACTION }
     : styles.chartAreaPortrait;
