@@ -80,6 +80,44 @@ export function dateBounds(points: ChartPoint[]): DateBounds {
   return { min: dates[0], max: dates[dates.length - LAST_INDEX_OFFSET] };
 }
 
+/**
+ * The points that frame a time window for one series: those inside it, plus the
+ * nearest point on each side. The bracketing points matter because a connecting
+ * line can cross the window even when no vertex falls inside it — without them,
+ * zooming into the gap between two records finds nothing and the result axis
+ * snaps back to the full-career scale. Ported from records-chart.js.
+ */
+export function pointsFramingWindow(
+  points: ChartPoint[],
+  windowStartMs: number,
+  windowEndMs: number,
+): ChartPoint[] {
+  const framing: ChartPoint[] = [];
+  let nearestBefore: ChartPoint | null = null;
+  let nearestAfter: ChartPoint | null = null;
+  for (const point of points) {
+    const timestamp = Date.parse(point.date);
+    if (timestamp < windowStartMs) {
+      if (nearestBefore === null || timestamp > Date.parse(nearestBefore.date)) {
+        nearestBefore = point;
+      }
+    } else if (timestamp > windowEndMs) {
+      if (nearestAfter === null || timestamp < Date.parse(nearestAfter.date)) {
+        nearestAfter = point;
+      }
+    } else {
+      framing.push(point);
+    }
+  }
+  if (nearestBefore !== null) {
+    framing.push(nearestBefore);
+  }
+  if (nearestAfter !== null) {
+    framing.push(nearestAfter);
+  }
+  return framing;
+}
+
 /** Render a result-axis tick: whole seconds, as "m:ss" once it reaches a minute. */
 export function formatAxisTick(centiseconds: number): string {
   const totalSeconds = Math.round(centiseconds / CENTISECONDS_PER_SECOND);
