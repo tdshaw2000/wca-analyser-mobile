@@ -1,6 +1,7 @@
 import { renderHook, act } from '@testing-library/react-native';
 
 import { useChartZoom } from '@/hooks/useChartZoom';
+import type { TimeRange } from '@/domain/services/chart';
 
 // The hook holds the chart's visible time window as React state, driving it with
 // the already-tested zoomWindow/panWindow. It is the testable core of zoom; the
@@ -9,15 +10,15 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const FULL_RANGE = { min: 0, max: 100 * DAY_MS };
 
 describe('useChartZoom', () => {
-  it('starts showing the full range and reports it is not zoomed', () => {
-    const { result } = renderHook(() => useChartZoom(FULL_RANGE));
+  it('starts showing the full range and reports it is not zoomed', async () => {
+    const { result } = await renderHook(() => useChartZoom(FULL_RANGE));
 
     expect(result.current.window).toEqual({ start: 0, end: 100 * DAY_MS });
     expect(result.current.isZoomed).toBe(false);
   });
 
-  it('narrows the window and flags it zoomed when zooming in', () => {
-    const { result } = renderHook(() => useChartZoom(FULL_RANGE));
+  it('narrows the window and flags it zoomed when zooming in', async () => {
+    const { result } = await renderHook(() => useChartZoom(FULL_RANGE));
 
     act(() => result.current.zoomBy(2, 0.5));
 
@@ -25,8 +26,8 @@ describe('useChartZoom', () => {
     expect(result.current.isZoomed).toBe(true);
   });
 
-  it('slides the visible window when panning', () => {
-    const { result } = renderHook(() => useChartZoom(FULL_RANGE));
+  it('slides the visible window when panning', async () => {
+    const { result } = await renderHook(() => useChartZoom(FULL_RANGE));
 
     act(() => result.current.zoomBy(2, 0.5));
     act(() => result.current.panBy(0.5));
@@ -35,8 +36,8 @@ describe('useChartZoom', () => {
     expect(result.current.window).toEqual({ start: 50 * DAY_MS, end: 100 * DAY_MS });
   });
 
-  it('restores the full range on reset', () => {
-    const { result } = renderHook(() => useChartZoom(FULL_RANGE));
+  it('restores the full range on reset', async () => {
+    const { result } = await renderHook(() => useChartZoom(FULL_RANGE));
 
     act(() => result.current.zoomBy(2, 0.5));
     act(() => result.current.reset());
@@ -45,8 +46,8 @@ describe('useChartZoom', () => {
     expect(result.current.isZoomed).toBe(false);
   });
 
-  it('snaps back to the full range when the data extent changes', () => {
-    const { result, rerender } = renderHook((range) => useChartZoom(range), {
+  it('snaps back to the full range when the data extent changes', async () => {
+    const { result, rerender } = await renderHook((range: TimeRange) => useChartZoom(range), {
       initialProps: FULL_RANGE,
     });
 
