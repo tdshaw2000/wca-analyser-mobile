@@ -20,7 +20,7 @@ describe('useChartZoom', () => {
   it('narrows the window and flags it zoomed when zooming in', async () => {
     const { result } = await renderHook(() => useChartZoom(FULL_RANGE));
 
-    act(() => result.current.zoomBy(2, 0.5));
+    await act(async () => result.current.zoomBy(2, 0.5));
 
     expect(result.current.window).toEqual({ start: 25 * DAY_MS, end: 75 * DAY_MS });
     expect(result.current.isZoomed).toBe(true);
@@ -29,8 +29,8 @@ describe('useChartZoom', () => {
   it('slides the visible window when panning', async () => {
     const { result } = await renderHook(() => useChartZoom(FULL_RANGE));
 
-    act(() => result.current.zoomBy(2, 0.5));
-    act(() => result.current.panBy(0.5));
+    await act(async () => result.current.zoomBy(2, 0.5));
+    await act(async () => result.current.panBy(0.5));
 
     // span 50d shifted forward by 0.5 * 50d = 25d -> days 50..100.
     expect(result.current.window).toEqual({ start: 50 * DAY_MS, end: 100 * DAY_MS });
@@ -39,8 +39,8 @@ describe('useChartZoom', () => {
   it('restores the full range on reset', async () => {
     const { result } = await renderHook(() => useChartZoom(FULL_RANGE));
 
-    act(() => result.current.zoomBy(2, 0.5));
-    act(() => result.current.reset());
+    await act(async () => result.current.zoomBy(2, 0.5));
+    await act(async () => result.current.reset());
 
     expect(result.current.window).toEqual({ start: 0, end: 100 * DAY_MS });
     expect(result.current.isZoomed).toBe(false);
@@ -51,8 +51,8 @@ describe('useChartZoom', () => {
       initialProps: FULL_RANGE,
     });
 
-    act(() => result.current.zoomBy(2, 0.5));
-    rerender({ min: 0, max: 200 * DAY_MS });
+    await act(async () => result.current.zoomBy(2, 0.5));
+    await act(async () => rerender({ min: 0, max: 200 * DAY_MS }));
 
     expect(result.current.window).toEqual({ start: 0, end: 200 * DAY_MS });
   });
