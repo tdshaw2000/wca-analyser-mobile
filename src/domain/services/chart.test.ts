@@ -4,6 +4,7 @@ import {
   resultBounds,
   dateBounds,
   formatAxisTick,
+  pointsFramingWindow,
 } from '@/domain/services/chart';
 import type { ChartPoint } from '@/domain/models/chartPoint';
 import type { RecordPoint } from '@/domain/models/recordPoint';
@@ -103,6 +104,38 @@ describe('dateBounds', () => {
     ]);
 
     expect(bounds).toEqual({ min: '2023-11-18', max: '2024-11-01' });
+  });
+});
+
+// Ported from records-chart.js's pointsFramingWindow. The bracketing points
+// matter because a connecting line can cross a time window even when no vertex
+// falls inside it; without them, zooming into the gap between two records would
+// find nothing and the result axis would snap back to the full-career scale.
+describe('pointsFramingWindow', () => {
+  const POINT_JAN = chartPoint('2024-01-01', 100);
+  const POINT_FEB = chartPoint('2024-02-01', 200);
+  const POINT_MAR = chartPoint('2024-03-01', 300);
+  const POINT_APR = chartPoint('2024-04-01', 400);
+  const SERIES = [POINT_JAN, POINT_FEB, POINT_MAR, POINT_APR];
+
+  it('returns the points inside the window plus the nearest point each side', () => {
+    const start = Date.parse('2024-02-15');
+    const end = Date.parse('2024-03-15');
+
+    // POINT_MAR is inside; POINT_FEB brackets before, POINT_APR brackets after.
+    expect(pointsFramingWindow(SERIES, start, end)).toEqual([POINT_MAR, POINT_FEB, POINT_APR]);
+  });
+
+  it('still returns the bracketing points when the window falls between two records', () => {
+    const start = Date.parse('2024-02-10');
+    const end = Date.parse('2024-02-20');
+
+    // Nothing inside; POINT_FEB brackets before, POINT_MAR brackets after.
+    expect(pointsFramingWindow(SERIES, start, end)).toEqual([POINT_FEB, POINT_MAR]);
+  });
+
+  it('returns an empty array for an empty series', () => {
+    expect(pointsFramingWindow([], Date.parse('2024-01-01'), Date.parse('2024-12-31'))).toEqual([]);
   });
 });
 
