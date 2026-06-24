@@ -22,6 +22,10 @@ const RESULT_AXIS_PADDING_FRACTION = 0.05;
 const AXIS_FLOOR = 0;
 const NO_FULL_MINUTE = 0;
 const LAST_INDEX_OFFSET = 1;
+// The narrowest time window a zoom can reach. Records are dated to the day, so
+// zooming below a day reveals nothing new and only risks a degenerate span.
+const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+const MINIMUM_WINDOW_SPAN_MS = MILLISECONDS_PER_DAY;
 
 export interface ValueBounds {
   min: number;
@@ -78,6 +82,51 @@ export function resultBounds(points: ChartPoint[]): ValueBounds {
 export function dateBounds(points: ChartPoint[]): DateBounds {
   const dates = points.map((point) => point.date).sort();
   return { min: dates[0], max: dates[dates.length - LAST_INDEX_OFFSET] };
+}
+
+/** A visible slice of the time axis, in epoch milliseconds. */
+export interface TimeWindow {
+  start: number;
+  end: number;
+}
+
+/** The full extent of the data on the time axis, in epoch milliseconds. */
+export interface TimeRange {
+  min: number;
+  max: number;
+}
+
+function clamp(value: number, lowest: number, highest: number): number {
+  return Math.min(Math.max(value, lowest), highest);
+}
+
+/**
+ * Re-window the time axis under a pinch. scaleFactor > 1 zooms in (narrows the
+ * span); the focusFraction (0..1) is the point within the current window held
+ * fixed under the gesture. The result is clamped so it neither widens past the
+ * full data range nor zooms below the one-day floor, and is shifted to sit
+ * flush against an edge rather than spilling beyond it. Net-new logic: the web's
+ * Chart.js zoom plugin handled this internally, so there is no source to port.
+ */
+export function zoomWindow(
+  window: TimeWindow,
+  fullRange: TimeRange,
+  scaleFactor: number,
+  focusFraction: number,
+): TimeWindow {
+  const fullSpan = fullRange.max - fullRange.min;
+  if (fullSpan <= MINIMUM_WINDOW_SPAN_MS) {
+    return { start: fullRange.min, end: fullRange.max };
+  }
+  const currentSpan = window.end - window.start;
+  const newSpan = clamp(currentSpan / scaleFactor, MINIMUM_WINDOW_SPAN_MS, fullSpan);
+  if (newSpan >= fullSpan) {
+    return { start: fullRange.min, end: fullRange.max };
+  }
+  const focusMs = window.start + focusFraction * currentSpan;
+  const desiredStart = focusMs - focusFraction * newSpan;
+  const start = clamp(desiredStart, fullRange.min, fullRange.max - newSpan);
+  return { start, end: start + newSpan };
 }
 
 /**
