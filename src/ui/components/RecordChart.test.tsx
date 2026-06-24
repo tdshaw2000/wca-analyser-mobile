@@ -3,6 +3,7 @@ import { processColor } from 'react-native';
 
 import {
   RecordChart,
+  buildScale,
   SINGLE_POINT_TEST_ID,
   AVERAGE_POINT_TEST_ID,
   SINGLE_LINE_TEST_ID,
@@ -196,6 +197,42 @@ describe('RecordChart', () => {
     await fireEvent.press(screen.getByTestId(BAND_LEGEND_TEST_ID));
 
     expect(screen.getByTestId(BAND_TEST_ID)).toBeTruthy();
+  });
+
+  // buildScale is the pure window -> pixel mapping behind the chart. Driving it
+  // directly proves a zoomed window re-maps the axes, without simulating gestures
+  // (the gesture feel itself is a manual Expo Go check). A plain plot rectangle:
+  // a 40px y-axis gutter on the left, 12px padding elsewhere, in a 320x212 box.
+  const RECT = {
+    left: 40,
+    right: 320,
+    top: 12,
+    bottom: 200,
+    width: 280,
+    height: 188,
+    centreX: 180,
+    centreY: 106,
+  };
+
+  describe('buildScale', () => {
+    const WINDOW = { start: Date.parse('2024-02-15'), end: Date.parse('2024-03-15') };
+    const VALUE_BOUNDS = { min: 1900, max: 4100 };
+
+    it('maps the window edges onto the plot rectangle edges', () => {
+      const scale = buildScale(WINDOW, VALUE_BOUNDS, RECT);
+
+      expect(scale.x('2024-02-15')).toBe(RECT.left);
+      expect(scale.x('2024-03-15')).toBe(RECT.right);
+    });
+
+    it('maps the value bounds onto the plot top and bottom, slower times at the top', () => {
+      const scale = buildScale(WINDOW, VALUE_BOUNDS, RECT);
+
+      // The higher (slower) value sits at the top so a descending line reads as
+      // improvement; the bounds drive this, so a zoomed window fills the height.
+      expect(scale.y(VALUE_BOUNDS.max)).toBe(RECT.top);
+      expect(scale.y(VALUE_BOUNDS.min)).toBe(RECT.bottom);
+    });
   });
 
   it('keeps the y-axis fixed when a series is hidden', async () => {
