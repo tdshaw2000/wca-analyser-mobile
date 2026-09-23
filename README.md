@@ -1,93 +1,146 @@
-# wca-analyser-mobile
+# WCA Analyser (Mobile)
 
+An Android-only React Native / Expo app that browses public [World Cube
+Association](https://www.worldcubeassociation.org/) competition data and computes
+Personal Records (PRs) for a competitor across events — a TypeScript port of the
+sibling Python project [`wca-records-analyser`](https://github.com/tdshaw2000/wca-records-analyser).
 
+It's a read-only client: no backend of its own, no auth, no API keys. It calls the
+public WCA API directly over HTTPS and requires network connectivity.
 
-## Getting started
+## Tech stack
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- **Expo SDK 56** (managed React Native) + **TypeScript strict**
+- **expo-router** (file-based navigation)
+- **Jest** (`jest-expo` preset) + **@testing-library/react-native** for testing
+- **EAS Build** for standalone APKs (no local Android Studio/SDK required)
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+See `CLAUDE.md` for the full architecture (`src/domain` → `src/data` → `src/hooks` →
+`src/ui`), coding standards, and TDD workflow. See `PORTING.md` for what's been ported
+from the Python source and what's intentionally out of scope.
 
-## Add your files
+## Prerequisites
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+- **Node.js** (verified working: v24.21.0) and **npm** (verified working: v11.19.0) —
+  any reasonably current LTS Node should work.
+- **A physical Android device** with the **[Expo Go](https://expo.dev/go)** app
+  installed — get the build that matches this project's SDK (**SDK 56**) from
+  **expo.dev/go**, not the Play Store version, which is frozen on an older SDK and
+  will reject this project ("incompatible", with no bundling logs, if you use the
+  wrong one).
+- **[EAS CLI](https://docs.expo.dev/eas/)**, only if you want to produce a standalone
+  installable APK (not required for day-to-day development in Expo Go):
+  ```
+  npm install --global eas-cli
+  eas login
+  ```
+
+### If you're on WSL2 (Windows)
+
+- Make sure `node`/`npm`/`npx` resolve to the **Linux** binaries, not
+  `/mnt/c/.../nodejs`. Check with `which node` — it should point somewhere under
+  `/usr` or `/snap`, never `/mnt/c`.
+- Never `mv` `node_modules` between directories (breaks bin symlinks) — always
+  reinstall in place with `npm install`.
+- LAN/QR connection from Expo Go usually doesn't work over WSL2's virtualised
+  networking — use the `--tunnel` flag (see below).
+
+## Getting the code
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/Tim.Shaw/wca-analyser-mobile.git
-git branch -M main
-git push -uf origin main
+git clone git@github.com:tdshaw2000/wca-analyser-mobile.git
+cd wca-analyser-mobile
 ```
 
-## Integrate with your tools
+## Install dependencies
 
-* [Set up project integrations](https://gitlab.com/Tim.Shaw/wca-analyser-mobile/-/settings/integrations)
+```
+npm install
+```
 
-## Collaborate with your team
+Going forward, when *adding* a new native/Expo dependency, use `npx expo install
+<package>` instead of `npm install <package>` — it picks the version compatible with
+SDK 56 rather than defaulting to the package's latest.
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+## Running in Expo Go (day-to-day development)
 
-## Test and Deploy
+```
+npx expo start --tunnel
+```
 
-Use the built-in continuous integration in GitLab.
+- `--tunnel` is the reliable option on WSL2 and most restricted networks; drop it for
+  a plain LAN QR code if you're on a simple home network and it works for you.
+- Scan the QR code from the terminal with the **Expo Go** app (SDK 56 build — see
+  Prerequisites).
+- Expo Go caches the downloaded JS bundle per project. If you don't see your latest
+  changes after editing files, restarting Metro isn't enough — use the in-app dev
+  menu → **Reload** on the phone itself. Restart Metro with `npx expo start -c` if
+  you need to clear its cache too.
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+## Tests and typechecking
 
-***
+```
+npm test            # Jest — must be green before committing
+npm run typecheck   # tsc --noEmit — must be clean before committing
+npm run test:watch  # Jest in watch mode
+```
 
-# Editing this README
+This project follows strict TDD (see `CLAUDE.md`) — tests are written before the
+implementation they cover, and unit tests are the primary source of confidence for
+everything in `src/domain`, `src/data`, and `src/hooks`. UI *behaviour* is covered
+with `@testing-library/react-native`; only real on-device look/feel is a manual
+check in Expo Go rather than a unit test.
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+## Building a standalone APK (EAS Build)
 
-## Suggestions for a good README
+No local Android SDK/Studio setup is needed — EAS builds in the cloud.
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+```
+eas build -p android --profile preview --non-interactive
+```
 
-## Name
-Choose a self-explaining name for your project.
+- Uses the `preview` profile in `eas.json` (internal distribution, produces a
+  sideloadable `.apk` — the `production` profile produces a Play Store `.aab`
+  instead, which you can't sideload).
+- The keystore is auto-generated and stored server-side by EAS; nothing secret ever
+  lives in this repo.
+- `eas build` prints a QR code (and the build page shows one too) — scan it on your
+  Android device to download and sideload the APK (you'll need to approve
+  "install from unknown sources").
+- There's no live reload in a standalone APK — use Expo Go (above) for fast
+  iteration, and only build a fresh APK when you want to ship/test a real install.
+- `eas build:list` re-shows links to recent builds; `eas whoami` confirms which EAS
+  account you're logged into.
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+## Project structure
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+```
+app/                    expo-router routes (thin — set nav options, render a screen)
+src/
+  domain/               pure TypeScript — the Python port target, no RN/network imports
+    models/             entities (Person, Result, ...)
+    services/           business rules over already-fetched, typed data (PRs, formatting, chart data)
+  data/                 everything that talks to the outside world
+    api/                typed fetch wrapper + raw WCA API DTOs
+    repositories/       fetch + map DTO -> domain (the anti-corruption boundary)
+  hooks/                bridges UI <-> data/domain, exposes { data, loading, error, reload }
+  ui/
+    screens/            "dumb" screens
+    components/
+    theme/
+```
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+Data flow: **WCA API → `data/api` → repositories → `domain/services` → `hooks` → screens.**
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+See `CLAUDE.md` for the full set of working standards (TDD discipline, commit
+conventions, code style) that apply to this project.
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+## Terminology
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+- **PR** = **Personal Record** (the speedcubing term — never "pull request"). A
+  result is a PR when it beats all of that competitor's prior results for the same
+  event.
+- The WCA API doesn't flag PRs — they're computed here as the running minimum of
+  results ordered by competition date. `regional_single_record` /
+  `regional_average_record` are *regional* records (NR/CR/WR), not PRs.
+- Singles are in **centiseconds**; non-positive values are DNF/DNS and are skipped.
